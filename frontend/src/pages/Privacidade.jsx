@@ -67,7 +67,7 @@ export default function Privacidade() {
         <h2 className="legal-titulo">6. Contato</h2>
         <p>
           Dúvidas sobre esta política ou sobre seus dados? Fale com a gente pelo e-mail{' '}
-          <a href="mailto:alessandro@setalab.com.br">alessandro@setalab.com.br</a>.
+          <a href="mailto:deiviarcanjoo@gmail.com">deiviarcanjoo@gmail.com</a>.
         </p>
       </div>
     </div>

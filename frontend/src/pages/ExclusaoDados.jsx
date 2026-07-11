@@ -32,7 +32,7 @@ export default function ExclusaoDados() {
         <p>
           Para apagar permanentemente sua conta e todos os dados associados (perfil, vendas
           importadas, gastos de anúncios, custos e integrações), envie um e-mail para{' '}
-          <a href="mailto:alessandro@setalab.com.br">alessandro@setalab.com.br</a> com o assunto
+          <a href="mailto:deiviarcanjoo@gmail.com">deiviarcanjoo@gmail.com</a> com o assunto
           <strong> “Exclusão de dados”</strong>, a partir do e-mail cadastrado na sua conta.
         </p>
 
@@ -54,7 +54,7 @@ export default function ExclusaoDados() {
         <h2 className="legal-titulo">Contato</h2>
         <p>
           Qualquer dúvida sobre exclusão de dados? Escreva para{' '}
-          <a href="mailto:alessandro@setalab.com.br">alessandro@setalab.com.br</a>. Veja também nossa{' '}
+          <a href="mailto:deiviarcanjoo@gmail.com">deiviarcanjoo@gmail.com</a>. Veja também nossa{' '}
           <Link to="/privacidade">Política de Privacidade</Link>.
         </p>
       </div>
