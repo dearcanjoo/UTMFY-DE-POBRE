@@ -12,11 +12,24 @@ import Integracoes from './pages/Integracoes.jsx'
 import Custos from './pages/Custos.jsx'
 import Ranking from './pages/Ranking.jsx'
 import Configuracoes from './pages/Configuracoes.jsx'
+import Privacidade from './pages/Privacidade.jsx'
+import ExclusaoDados from './pages/ExclusaoDados.jsx'
 
 export default function App() {
   const { usuario, carregando, recuperandoSenha, entrar, atualizarSenha, atualizarEmail, concluirRecuperacao, sair } = useAuth()
   const { perfil, carregando: carregandoPerfil, recarregar: recarregarPerfil } = usePerfil(usuario)
   useSyncAutomatico(usuario) // sincroniza Cakto + Meta ao abrir o app e ao voltar o foco
+
+  // Páginas públicas exigidas pela revisão do Meta — acessíveis sem login,
+  // pois o revisor precisa abrir esses links diretamente.
+  if (['/privacidade', '/exclusao-de-dados'].includes(window.location.pathname)) {
+    return (
+      <Routes>
+        <Route path="/privacidade" element={<Privacidade />} />
+        <Route path="/exclusao-de-dados" element={<ExclusaoDados />} />
+      </Routes>
+    )
+  }
 
   if (carregando) {
     return (

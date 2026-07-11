@@ -709,3 +709,20 @@ a.nav-item, a.nav-item:hover { text-decoration: none; }
   font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
   color: var(--texto-suave); padding: 8px 10px 4px;
 }
+
+/* Páginas legais públicas (privacidade / exclusão de dados) */
+.pagina-legal { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+.legal-cabecalho {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.legal-marca { font-weight: 800; font-size: 18px; color: var(--amarelo); letter-spacing: -0.01em; }
+.legal-voltar { text-decoration: none; }
+.legal-voltar:hover { color: var(--texto); }
+.legal-conteudo p { line-height: 1.65; margin: 10px 0; font-size: 14.5px; }
+.legal-titulo {
+  font-size: 16px; font-weight: 700; margin: 26px 0 6px;
+}
+.legal-lista { margin: 8px 0 8px 4px; padding-left: 18px; }
+.legal-lista li { line-height: 1.6; margin: 6px 0; font-size: 14.5px; }
+.legal-conteudo a { color: var(--verde); text-decoration: underline; }
