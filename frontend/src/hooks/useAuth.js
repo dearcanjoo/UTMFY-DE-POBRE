@@ -32,6 +32,10 @@ export function useAuth() {
       options: { data: dados },
     })
 
+  // Checa no banco se um nome de usuário está livre (usado no cadastro).
+  const verificarUsername = (nomeUsuario) =>
+    supabase.rpc('username_disponivel', { candidato: nomeUsuario })
+
   const recuperarSenha = (email) =>
     supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: `${window.location.origin}`,
@@ -52,7 +56,7 @@ export function useAuth() {
 
   return {
     usuario, carregando, recuperandoSenha,
-    entrar, cadastrar, recuperarSenha, reenviarConfirmacao,
+    entrar, cadastrar, verificarUsername, recuperarSenha, reenviarConfirmacao,
     atualizarSenha, concluirRecuperacao, sair,
   }
 }

@@ -18,6 +18,7 @@ const ITENS = [
   { para: '/produtos', rotulo: 'Produtos', icone: 'M21 8l-9-5-9 5v8l9 5 9-5V8M3 8l9 5 9-5M12 13v8' },
   { para: '/custos', rotulo: 'Custos', icone: 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6' },
   { para: '/integracoes', rotulo: 'Conexões', icone: 'M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.5 1.5M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7L12 19' },
+  { para: '/ranking', rotulo: 'Ranking', icone: 'M8 21h8M12 17v4M7 4h10v4a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3' },
   { para: '/configuracoes', rotulo: 'Conta', icone: 'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8' },
 ]
 

@@ -30,10 +30,11 @@ function forcaSenha(s) {
 }
 
 export default function Login() {
-  const { entrar, cadastrar, recuperarSenha, reenviarConfirmacao } = useAuth()
+  const { entrar, cadastrar, verificarUsername, recuperarSenha, reenviarConfirmacao } = useAuth()
   const [modo, setModo] = useState('entrar') // 'entrar' | 'cadastrar' | 'recuperar'
 
   const [nome, setNome] = useState('')
+  const [nomeUsuario, setNomeUsuario] = useState('')
   const [email, setEmail] = useState('')
   const [nascimento, setNascimento] = useState('')
   const [faixa, setFaixa] = useState('')
@@ -63,6 +64,8 @@ export default function Login() {
   function validar() {
     if (modo === 'cadastrar') {
       if (!nome.trim()) return 'Informe seu nome.'
+      if (!nomeUsuario.trim()) return 'Escolha um nome de usuário.'
+      if (!/^[a-z0-9_]{3,20}$/.test(nomeUsuario)) return 'Nome de usuário: 3 a 20 caracteres, só letras minúsculas, números e _.'
       if (!nascimento) return 'Informe sua data de nascimento.'
       const idade = idadeEmAnos(nascimento)
       if (idade === null) return 'Data de nascimento inválida.'
@@ -107,9 +110,14 @@ export default function Login() {
       return
     }
 
-    // cadastrar
+    // cadastrar — antes, confere se o nome de usuário está livre
+    const { data: disponivel, error: errUser } = await verificarUsername(nomeUsuario)
+    if (errUser) { setEnviando(false); setErro('Não consegui validar o nome de usuário. Tente novamente.'); return }
+    if (!disponivel) { setEnviando(false); setErro('Esse nome de usuário já está em uso. Escolha outro.'); return }
+
     const { data, error } = await cadastrar(email, senha, {
       nome: nome.trim(),
+      nome_usuario: nomeUsuario,
       data_nascimento: nascimento,
       faturamento_faixa: faixa,
     })
@@ -157,6 +165,25 @@ export default function Login() {
             <div className="campo">
               <label>Nome completo</label>
               <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Como podemos te chamar" autoComplete="name" />
+            </div>
+          )}
+
+          {modo === 'cadastrar' && (
+            <div className="campo">
+              <label>Nome de usuário</label>
+              <input
+                type="text"
+                value={nomeUsuario}
+                onChange={(e) => setNomeUsuario(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                placeholder="ex: joao_vendas"
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                maxLength={20}
+              />
+              <span className="campo-aviso" style={{ color: 'var(--texto-suave)' }}>
+                Aparece no ranking público. 3 a 20 caracteres — letras minúsculas, números e _.
+              </span>
             </div>
           )}
 
@@ -282,6 +309,7 @@ function traduzErro(msg) {
   if (/email not confirmed/i.test(msg)) return 'Seu e-mail ainda não foi confirmado.'
   if (/unable to validate email|invalid.*email/i.test(msg)) return 'E-mail inválido.'
   if (/rate limit|too many/i.test(msg)) return 'Muitas tentativas. Aguarde alguns instantes e tente de novo.'
+  if (/database error saving|duplicate key|perfis_nome_usuario/i.test(msg)) return 'Esse nome de usuário já está em uso. Escolha outro.'
   if (/network|failed to fetch/i.test(msg)) return 'Falha de conexão. Verifique sua internet.'
   return msg
 }
