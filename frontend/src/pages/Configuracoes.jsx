@@ -1,3 +1,5 @@
+import AtivarNotificacoes from '../components/AtivarNotificacoes.jsx'
+
 export default function Configuracoes({ usuario, sair }) {
   return (
     <div>
@@ -7,6 +9,7 @@ export default function Configuracoes({ usuario, sair }) {
         <p style={{ fontSize: 14, marginBottom: 4 }}>{usuario.email}</p>
         <p className="texto-suave">Seus dados são privados: cada usuário enxerga apenas as próprias vendas, gastos e custos (garantido no nível do banco).</p>
       </div>
+      <AtivarNotificacoes usuario={usuario} />
       <div className="card secao">
         <div className="subtitulo">Instalar no celular</div>
         <p className="texto-suave">
