@@ -237,6 +237,7 @@ a.nav-item, a.nav-item:hover { text-decoration: none; }
 .botao.perigo:hover:not(:disabled) { background: var(--vermelho-suave); filter: none; }
 .botao.pequeno { width: auto; padding: 8px 14px; font-size: 12.5px; min-height: 36px; }
 .botao.destaque { background: var(--amarelo); border-color: var(--amarelo); color: var(--grafite); }
+.linha-botoes { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
 /* Botão de ícone (modal, ações inline) */
 .botao-icone {

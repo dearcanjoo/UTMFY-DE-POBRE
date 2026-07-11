@@ -4,7 +4,7 @@ import { supabase, FUNCTIONS_URL } from '../lib/supabase.js'
 import TutorialIntegracao from '../components/TutorialIntegracao.jsx'
 
 const META_APP_ID = import.meta.env.VITE_META_APP_ID
-const META_SCOPES = 'ads_read,read_insights'
+const META_SCOPES = 'ads_read'
 
 export default function Integracoes({ usuario }) {
   const [conexoes, setConexoes] = useState({})
@@ -78,6 +78,22 @@ export default function Integracoes({ usuario }) {
     } catch (err) { setErro(err.message) } finally { setOcupado(false) }
   }
 
+  // ===== DESCONECTAR (Cakto ou Meta) =====
+  async function desconectar(prov) {
+    const nomes = { cakto: 'Cakto', meta: 'Meta Ads' }
+    if (!window.confirm(`Desconectar ${nomes[prov]}? As credenciais salvas serão removidas. Você pode reconectar quando quiser.`)) return
+    setOcupado(true); setErro(null); setMsg(null)
+    try {
+      const alvo = conexoes[prov]
+      if (alvo?.id) {
+        const { error } = await supabase.from('conexoes').delete().eq('id', alvo.id)
+        if (error) throw new Error(error.message)
+      }
+      setMsg(`${nomes[prov]} desconectada.`)
+      carregar()
+    } catch (err) { setErro(err.message) } finally { setOcupado(false) }
+  }
+
   // ===== META =====
   function conectarMeta() {
     const redirect = `${window.location.origin}/integracoes`
@@ -145,9 +161,14 @@ export default function Integracoes({ usuario }) {
             Cakto
           </div>
           {cakto?.status === 'conectado' && (
-            <button className="botao secundario pequeno" onClick={sincronizarCakto} disabled={ocupado}>
-              Sincronizar vendas
-            </button>
+            <div className="linha-botoes">
+              <button className="botao secundario pequeno" onClick={sincronizarCakto} disabled={ocupado}>
+                Sincronizar vendas
+              </button>
+              <button className="botao perigo pequeno" onClick={() => desconectar('cakto')} disabled={ocupado}>
+                Desconectar
+              </button>
+            </div>
           )}
         </div>
         {cakto?.status !== 'conectado' && (
@@ -202,9 +223,14 @@ export default function Integracoes({ usuario }) {
             Meta Ads
           </div>
           {meta?.status === 'conectado' && (
-            <button className="botao secundario pequeno" onClick={sincronizarMeta} disabled={ocupado}>
-              Sincronizar gastos
-            </button>
+            <div className="linha-botoes">
+              <button className="botao secundario pequeno" onClick={sincronizarMeta} disabled={ocupado}>
+                Sincronizar gastos
+              </button>
+              <button className="botao perigo pequeno" onClick={() => desconectar('meta')} disabled={ocupado}>
+                Desconectar
+              </button>
+            </div>
           )}
         </div>
 
@@ -222,7 +248,7 @@ export default function Integracoes({ usuario }) {
               passos={[
                 'Clique em “Conectar com Facebook” abaixo.',
                 'Faça login com a conta do Facebook que tem acesso ao Gerenciador de Anúncios.',
-                'Autorize o acesso de leitura aos anúncios (ads_read e read_insights). Não publicamos nem alteramos nada.',
+                'Autorize o acesso de leitura aos anúncios (ads_read). Não publicamos nem alteramos nada.',
                 'De volta aqui, marque quais contas de anúncios você quer acompanhar.',
                 'Clique em “Sincronizar gastos” para trazer os valores investidos. Depois disso, a atualização é automática.',
               ]}
