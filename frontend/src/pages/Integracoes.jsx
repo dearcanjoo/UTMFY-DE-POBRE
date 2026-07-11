@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase, FUNCTIONS_URL } from '../lib/supabase.js'
+import TutorialIntegracao from '../components/TutorialIntegracao.jsx'
 
 const META_APP_ID = import.meta.env.VITE_META_APP_ID
 const META_SCOPES = 'ads_read,read_insights'
@@ -149,6 +150,19 @@ export default function Integracoes({ usuario }) {
             </button>
           )}
         </div>
+        {cakto?.status !== 'conectado' && (
+          <TutorialIntegracao
+            titulo="Como conectar a Cakto"
+            passos={[
+              'No painel da Cakto, abra Configurações → Integrações / API e gere (ou copie) o seu Client ID e o Client Secret.',
+              'Cole os dois valores nos campos abaixo e clique em “Salvar credenciais”.',
+              'Uma URL de webhook vai aparecer aqui. Copie essa URL.',
+              'No painel da Cakto, cadastre essa URL como webhook e marque os eventos: compra aprovada, reembolso e chargeback.',
+              'Volte aqui e clique em “Sincronizar vendas” para importar o histórico. Depois disso, novas vendas chegam sozinhas.',
+            ]}
+            nota="Usamos as credenciais apenas para ler suas vendas — nunca alteramos nada na sua conta Cakto."
+          />
+        )}
         <form onSubmit={salvarCakto}>
           <div className="campo">
             <label>Client ID (chave de API da Cakto)</label>
@@ -203,6 +217,17 @@ export default function Integracoes({ usuario }) {
 
         {!meta || meta.status !== 'conectado' ? (
           <>
+            <TutorialIntegracao
+              titulo="Como conectar o Meta Ads"
+              passos={[
+                'Clique em “Conectar com Facebook” abaixo.',
+                'Faça login com a conta do Facebook que tem acesso ao Gerenciador de Anúncios.',
+                'Autorize o acesso de leitura aos anúncios (ads_read e read_insights). Não publicamos nem alteramos nada.',
+                'De volta aqui, marque quais contas de anúncios você quer acompanhar.',
+                'Clique em “Sincronizar gastos” para trazer os valores investidos. Depois disso, a atualização é automática.',
+              ]}
+              nota="A conexão é somente leitura e o acesso pode ser revogado a qualquer momento nas configurações do Facebook."
+            />
             <p className="texto-suave" style={{ marginBottom: 12 }}>
               Conecte com sua conta do Facebook para importar os gastos de anúncios automaticamente (somente leitura).
             </p>

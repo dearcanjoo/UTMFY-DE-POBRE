@@ -14,7 +14,7 @@ import Ranking from './pages/Ranking.jsx'
 import Configuracoes from './pages/Configuracoes.jsx'
 
 export default function App() {
-  const { usuario, carregando, recuperandoSenha, atualizarSenha, concluirRecuperacao, sair } = useAuth()
+  const { usuario, carregando, recuperandoSenha, entrar, atualizarSenha, atualizarEmail, concluirRecuperacao, sair } = useAuth()
   const { perfil, carregando: carregandoPerfil, recarregar: recarregarPerfil } = usePerfil(usuario)
   useSyncAutomatico(usuario) // sincroniza Cakto + Meta ao abrir o app e ao voltar o foco
 
@@ -56,7 +56,7 @@ export default function App() {
           <Route path="/integracoes" element={<Integracoes usuario={usuario} />} />
           <Route path="/custos" element={<Custos usuario={usuario} />} />
           <Route path="/ranking" element={<Ranking />} />
-          <Route path="/configuracoes" element={<Configuracoes usuario={usuario} sair={sair} />} />
+          <Route path="/configuracoes" element={<Configuracoes usuario={usuario} sair={sair} entrar={entrar} atualizarSenha={atualizarSenha} atualizarEmail={atualizarEmail} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

@@ -1,12 +1,18 @@
 import AtivarNotificacoes from '../components/AtivarNotificacoes.jsx'
+import EditarConta from '../components/EditarConta.jsx'
 
-export default function Configuracoes({ usuario, sair }) {
+export default function Configuracoes({ usuario, sair, entrar, atualizarSenha, atualizarEmail }) {
   return (
     <div>
       <h1 className="titulo-pagina">Configurações</h1>
+      <EditarConta
+        usuario={usuario}
+        entrar={entrar}
+        atualizarSenha={atualizarSenha}
+        atualizarEmail={atualizarEmail}
+      />
       <div className="card secao">
-        <div className="subtitulo">Conta</div>
-        <p style={{ fontSize: 14, marginBottom: 4 }}>{usuario.email}</p>
+        <div className="subtitulo">Privacidade</div>
         <p className="texto-suave">Seus dados são privados: cada usuário enxerga apenas as próprias vendas, gastos e custos (garantido no nível do banco).</p>
       </div>
       <AtivarNotificacoes usuario={usuario} />

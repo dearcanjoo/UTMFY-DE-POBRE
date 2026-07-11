@@ -4,6 +4,25 @@ import { moeda } from '../lib/formato.js'
 
 const MEDALHA = { 1: '🥇', 2: '🥈', 3: '🥉' }
 
+// Card de um dos três primeiros no pódio.
+function PodioItem({ u, lugar }) {
+  const inicial = (u.nome_usuario?.[0] || '?').toUpperCase()
+  return (
+    <div className={`podio-item lugar-${lugar}${u.eh_voce ? ' eh-voce' : ''}`}>
+      <div className="podio-avatar">
+        {inicial}
+        <span className="podio-medalha">{MEDALHA[lugar]}</span>
+      </div>
+      <div className="podio-nome">@{u.nome_usuario}</div>
+      {u.eh_voce && <span className="rank-tag">você</span>}
+      <div className="podio-valor">{moeda(Number(u.total))}</div>
+      <div className="podio-base">
+        <span className="podio-num">{lugar}º</span>
+      </div>
+    </div>
+  )
+}
+
 export default function Ranking() {
   const [estado, setEstado] = useState('carregando') // carregando | ok | erro
   const [top, setTop] = useState([])
@@ -21,7 +40,11 @@ export default function Ranking() {
     return () => { vivo = false }
   }, [])
 
-  // Se o usuário existe no ranking mas está fora do top 10, mostramos a linha dele à parte.
+  const porPos = (p) => top.find((u) => u.posicao === p) || null
+  const primeiro = porPos(1)
+  const segundo = porPos(2)
+  const terceiro = porPos(3)
+  const resto = top.filter((u) => u.posicao >= 4)
   const voceNoTop = voce && voce.posicao <= 10
 
   return (
@@ -46,24 +69,34 @@ export default function Ranking() {
       )}
 
       {estado === 'ok' && top.length > 0 && (
-        <div className="card secao rank-lista">
-          {top.map((u) => (
-            <div key={u.posicao} className={`rank-linha${u.eh_voce ? ' rank-voce' : ''}`}>
-              <div className={`rank-pos${u.posicao <= 3 ? ' rank-pos-top' : ''}`}>
-                {MEDALHA[u.posicao] || u.posicao}
-              </div>
-              <div className="rank-nome">
-                @{u.nome_usuario}
-                {u.eh_voce && <span className="rank-tag">você</span>}
-              </div>
-              <div className="rank-valor">{moeda(Number(u.total))}</div>
+        <>
+          <div className="rank-podio-card">
+            <div className="rank-podio">
+              {segundo && <PodioItem u={segundo} lugar={2} />}
+              {primeiro && <PodioItem u={primeiro} lugar={1} />}
+              {terceiro && <PodioItem u={terceiro} lugar={3} />}
             </div>
-          ))}
-        </div>
+          </div>
+
+          {resto.length > 0 && (
+            <div className="card secao rank-lista">
+              {resto.map((u) => (
+                <div key={u.posicao} className={`rank-linha${u.eh_voce ? ' rank-voce' : ''}`}>
+                  <div className="rank-pos">{u.posicao}</div>
+                  <div className="rank-nome">
+                    @{u.nome_usuario}
+                    {u.eh_voce && <span className="rank-tag">você</span>}
+                  </div>
+                  <div className="rank-valor">{moeda(Number(u.total))}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {estado === 'ok' && voce && !voceNoTop && (
-        <div className="card secao rank-lista" style={{ marginTop: -4 }}>
+        <div className="card secao rank-lista" style={{ marginTop: 12 }}>
           <div className="rank-sua-posicao">Sua posição</div>
           <div className="rank-linha rank-voce">
             <div className="rank-pos">{voce.posicao}</div>

@@ -47,6 +47,13 @@ export function useAuth() {
   const atualizarSenha = (novaSenha) =>
     supabase.auth.updateUser({ password: novaSenha })
 
+  // Troca de e-mail: o Supabase envia um link de confirmação para o novo endereço.
+  const atualizarEmail = (novoEmail) =>
+    supabase.auth.updateUser(
+      { email: novoEmail.trim() },
+      { emailRedirectTo: `${window.location.origin}` },
+    )
+
   const concluirRecuperacao = () => setRecuperandoSenha(false)
 
   const sair = async () => {
@@ -57,6 +64,6 @@ export function useAuth() {
   return {
     usuario, carregando, recuperandoSenha,
     entrar, cadastrar, verificarUsername, recuperarSenha, reenviarConfirmacao,
-    atualizarSenha, concluirRecuperacao, sair,
+    atualizarSenha, atualizarEmail, concluirRecuperacao, sair,
   }
 }
