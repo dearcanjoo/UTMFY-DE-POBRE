@@ -14,6 +14,7 @@ import Ranking from './pages/Ranking.jsx'
 import Configuracoes from './pages/Configuracoes.jsx'
 import Privacidade from './pages/Privacidade.jsx'
 import ExclusaoDados from './pages/ExclusaoDados.jsx'
+import Termos from './pages/Termos.jsx'
 
 export default function App() {
   const { usuario, carregando, recuperandoSenha, entrar, atualizarSenha, atualizarEmail, concluirRecuperacao, sair } = useAuth()
@@ -22,11 +23,12 @@ export default function App() {
 
   // Páginas públicas exigidas pela revisão do Meta — acessíveis sem login,
   // pois o revisor precisa abrir esses links diretamente.
-  if (['/privacidade', '/exclusao-de-dados'].includes(window.location.pathname)) {
+  if (['/privacidade', '/exclusao-de-dados', '/termos'].includes(window.location.pathname)) {
     return (
       <Routes>
         <Route path="/privacidade" element={<Privacidade />} />
         <Route path="/exclusao-de-dados" element={<ExclusaoDados />} />
+        <Route path="/termos" element={<Termos />} />
       </Routes>
     )
   }
