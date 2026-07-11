@@ -30,19 +30,15 @@ export const CATALOGO = [
   { id: 'roi', rotulo: 'ROI real', categoria: 'resultado', formato: 'pct', semantica: 'lucro',
     descricao: 'Lucro dividido pelo custo total. Retorno sobre tudo que saiu do bolso.' },
   { id: 'lucroPorVenda', rotulo: 'Lucro por venda', categoria: 'resultado', formato: 'moeda', semantica: 'lucro',
-    descricao: 'Quanto sobra, em média, de cada venda aprovada.' },
-  { id: 'lucroSobreGasto', rotulo: 'Lucro por real investido', categoria: 'resultado', formato: 'num', semantica: 'lucro',
-    descricao: 'Quantos reais de lucro cada R$ 1,00 de anúncio gerou.' },
+    descricao: 'Lucro líquido dividido pelas vendas aprovadas. Quanto sobra, em média, de cada venda.' },
 
   // ===== Receita =====
   { id: 'faturamento', rotulo: 'Faturamento líquido', categoria: 'receita', formato: 'moeda', semantica: 'neutro',
     descricao: 'Soma das comissões líquidas (o que realmente cai na sua conta).' },
   { id: 'faturamentoBruto', rotulo: 'Faturamento bruto', categoria: 'receita', formato: 'moeda', semantica: 'neutro',
     descricao: 'Valor cheio das vendas, antes da taxa da plataforma.' },
-  { id: 'ticketMedio', rotulo: 'Ticket médio (líquido)', categoria: 'receita', formato: 'moeda', semantica: 'neutro',
-    descricao: 'Faturamento líquido dividido pelo número de vendas.' },
-  { id: 'ticketMedioBruto', rotulo: 'Ticket médio (bruto)', categoria: 'receita', formato: 'moeda', semantica: 'neutro',
-    descricao: 'Valor cheio médio por venda.' },
+  { id: 'ticketMedio', rotulo: 'Ticket médio', categoria: 'receita', formato: 'moeda', semantica: 'neutro',
+    descricao: 'Faturamento líquido dividido pelo número de vendas aprovadas.' },
   { id: 'numVendas', rotulo: 'Vendas aprovadas', categoria: 'receita', formato: 'int', semantica: 'neutro',
     descricao: 'Quantidade de vendas aprovadas no período.' },
   { id: 'vendasPorDia', rotulo: 'Vendas por dia', categoria: 'receita', formato: 'num', semantica: 'neutro',
@@ -54,11 +50,9 @@ export const CATALOGO = [
   { id: 'roas', rotulo: 'ROAS', categoria: 'anuncios', formato: 'num', semantica: 'bom-alto', limiar: 1,
     descricao: 'Faturamento líquido dividido pelo gasto em anúncios.' },
   { id: 'cpa', rotulo: 'CPA real', categoria: 'anuncios', formato: 'moeda', semantica: 'neutro',
-    descricao: 'Custo total (ads + imposto + operação + estornos) por venda aprovada.' },
-  { id: 'cpaAds', rotulo: 'CPA de mídia', categoria: 'anuncios', formato: 'moeda', semantica: 'neutro',
-    descricao: 'Só o gasto de anúncio + imposto, dividido pelas vendas.' },
+    descricao: 'Custo total (anúncios + imposto + operação + estornos) dividido pelas vendas aprovadas. Quanto custa, de verdade, cada venda.' },
   { id: 'impostoAds', rotulo: 'Imposto sobre mídia', categoria: 'anuncios', formato: 'moeda', semantica: 'custo',
-    descricao: 'Imposto pago sobre o gasto de anúncios.' },
+    descricao: 'Imposto pago sobre o gasto de anúncios (percentual configurado ou valor manual).' },
   { id: 'gastoDiarioMedio', rotulo: 'Gasto diário médio', categoria: 'anuncios', formato: 'moeda', semantica: 'neutro',
     descricao: 'Gasto em anúncios dividido pelos dias do período.' },
 
@@ -71,12 +65,10 @@ export const CATALOGO = [
     descricao: 'Informativo: quanto você pagou de taxa. Já descontado do faturamento — não conta duas vezes.' },
 
   // ===== Risco e aprovação =====
-  { id: 'reembolsos', rotulo: 'Estornos (total)', categoria: 'risco', formato: 'moeda', semantica: 'custo',
-    descricao: 'Comissões devolvidas: reembolsos + chargebacks.' },
   { id: 'valorReembolsado', rotulo: 'Reembolsos (R$)', categoria: 'risco', formato: 'moeda', semantica: 'custo',
-    descricao: 'Só os reembolsos, sem chargebacks.' },
+    descricao: 'Comissões devolvidas em reembolsos (cliente pediu a devolução pela plataforma).' },
   { id: 'valorChargeback', rotulo: 'Chargebacks (R$)', categoria: 'risco', formato: 'moeda', semantica: 'custo',
-    descricao: 'Valor devolvido em chargebacks/disputas.' },
+    descricao: 'Comissões devolvidas em chargebacks (cliente contestou a compra direto no banco/cartão).' },
   { id: 'numReembolsos', rotulo: 'Reembolsos (nº)', categoria: 'risco', formato: 'int', semantica: 'neutro',
     descricao: 'Quantidade de vendas reembolsadas no período.' },
   { id: 'numChargebacks', rotulo: 'Chargebacks (nº)', categoria: 'risco', formato: 'int', semantica: 'neutro',
@@ -101,11 +93,12 @@ export const CATALOGO = [
     descricao: 'Participação do boleto nas vendas aprovadas.' },
 ]
 
+// Padrão do dashboard: a configuração da conta principal.
 export const METRICAS_PADRAO = [
-  'faturamento', 'gastoAds', 'roas', 'roi',
-  'lucro', 'impostoAds', 'cpa', 'numPendentes',
-  'margem', 'valorReembolsado', 'numReembolsos', 'taxaReembolso',
-  'ticketMedio',
+  'faturamento', 'gastoAds', 'roas', 'margem',
+  'cpa', 'ticketMedio', 'impostoAds', 'custosOperacao',
+  'custoTotal', 'numVendas', 'taxaAprovacao', 'pctPix',
+  'lucro',
 ]
 
 // ===== Catálogo de gráficos =====
@@ -117,6 +110,9 @@ export const GRAFICOS = [
   { id: 'funil', rotulo: 'Funil de conversão', descricao: 'Cliques > página > checkout > vendas.' },
 ]
 export const GRAFICOS_PADRAO = ['evolucaoLucro', 'pagamentos', 'vendasHorario', 'lucroHorario', 'funil']
+
+// Layout unificado: métricas e gráficos numa única lista ordenada.
+export const ITENS_PADRAO = [...METRICAS_PADRAO, ...GRAFICOS_PADRAO]
 
 const graficoPorIdMap = new Map(GRAFICOS.map((g) => [g.id, g]))
 export function graficoPorId(id) { return graficoPorIdMap.get(id) }

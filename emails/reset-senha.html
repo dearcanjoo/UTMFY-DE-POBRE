@@ -1,0 +1,60 @@
+<!-- MacacoFy · E-mail de redefinição de senha -->
+<!-- Cole este HTML em Supabase → Authentication → Emails → Reset password (requer SMTP customizado ativo) -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Redefinir senha · MacacoFy</title>
+</head>
+<body style="margin:0;padding:0;background:#eef2ef;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2ef;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 6px 24px rgba(18,24,20,0.08);">
+          <!-- Cabeçalho -->
+          <tr>
+            <td style="background:#0da566;padding:28px 32px;text-align:center;">
+              <span style="display:inline-block;font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">
+                Macaco<span style="color:#f2c53d;">Fy</span>
+              </span>
+            </td>
+          </tr>
+          <!-- Corpo -->
+          <tr>
+            <td style="padding:36px 32px 8px 32px;">
+              <h1 style="margin:0 0 12px 0;font-size:20px;font-weight:700;color:#121814;">Redefinir sua senha</h1>
+              <p style="margin:0 0 20px 0;font-size:15px;line-height:1.6;color:#4a544d;">
+                Recebemos um pedido para redefinir a senha da sua conta. Clique no botão abaixo para escolher uma nova senha. Se não foi você, pode ignorar este e-mail com segurança.
+              </p>
+            </td>
+          </tr>
+          <!-- Botão -->
+          <tr>
+            <td style="padding:4px 32px 28px 32px;" align="center">
+              <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#0da566;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 32px;border-radius:10px;">
+                Definir nova senha
+              </a>
+            </td>
+          </tr>
+          <!-- Link alternativo -->
+          <tr>
+            <td style="padding:0 32px 28px 32px;">
+              <p style="margin:0 0 6px 0;font-size:12px;color:#8a938c;">Se o botão não funcionar, copie e cole este link no navegador:</p>
+              <p style="margin:0;font-size:12px;word-break:break-all;color:#0da566;">{{ .ConfirmationURL }}</p>
+            </td>
+          </tr>
+          <!-- Rodapé -->
+          <tr>
+            <td style="padding:20px 32px;background:#f6f8f6;border-top:1px solid #e6ebe7;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#8a938c;">Este link expira em 1 hora por segurança.</p>
+              <p style="margin:8px 0 0 0;font-size:12px;color:#b3bab4;">© MacacoFy · Gestão de infoprodutos</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

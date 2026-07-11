@@ -1,9 +1,9 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useMemo } from 'react'
 import { useAuth } from '../hooks/useAuth.js'
 import { usePeriodo } from '../hooks/usePeriodo.js'
 import { useMetricas } from '../hooks/useMetricas.js'
 import { usePreferencias } from '../hooks/usePreferencias.js'
-import { metricaPorId, formatarValor, corDaMetrica, METRICAS_PADRAO, GRAFICOS_PADRAO } from '../lib/metricas.js'
+import { metricaPorId, graficoPorId, formatarValor, corDaMetrica, ITENS_PADRAO } from '../lib/metricas.js'
 import SeletorPeriodo from '../components/SeletorPeriodo.jsx'
 import CardMetrica from '../components/CardMetrica.jsx'
 import GraficoLucro from '../components/GraficoLucro.jsx'
@@ -25,70 +25,85 @@ export default function Dashboard() {
   const { usuario } = useAuth()
   const periodo = usePeriodo()
   const { dados, carregando, erro } = useMetricas(periodo.inicio, periodo.fim)
-  const { metricas: metricasSalvas, graficos: graficosSalvos, salvar } = usePreferencias(usuario)
+  const { itens: itensSalvos, salvar } = usePreferencias(usuario)
 
   // ===== Modo de edição (estilo UTMify) =====
   const [editando, setEditando] = useState(false)
-  const [rascunhoMetricas, setRascunhoMetricas] = useState([])
-  const [rascunhoGraficos, setRascunhoGraficos] = useState([])
-  const arrasto = useRef(null) // { tipo, origem: 'painel'|'grade', id, index }
-  const alvoRef = useRef(null) // posição de inserção lida no drop (evita estado defasado)
-  const [alvoDrop, setAlvoDrop] = useState(null) // índice onde o item seria inserido (indicador visual)
+  const [rascunho, setRascunho] = useState([])
+  const arrasto = useRef(null) // { origem: 'painel'|'grade', id }
+  const fantasmaRef = useRef(null) // { id, pos } — lido no drop (evita estado defasado)
+  const [fantasma, setFantasma] = useState(null) // idem, só para renderizar a pré-visualização
 
-  const metricas = editando ? rascunhoMetricas : metricasSalvas
-  const graficos = editando ? rascunhoGraficos : graficosSalvos
+  const itens = editando ? rascunho : itensSalvos
 
   const iniciarEdicao = () => {
-    setRascunhoMetricas(metricasSalvas)
-    setRascunhoGraficos(graficosSalvos)
+    setRascunho(itensSalvos)
     setEditando(true)
   }
-  const cancelar = () => { setEditando(false); setAlvoDrop(null) }
-  const redefinir = () => { setRascunhoMetricas(METRICAS_PADRAO); setRascunhoGraficos(GRAFICOS_PADRAO) }
+  const limparArrasto = () => { arrasto.current = null; fantasmaRef.current = null; setFantasma(null) }
+  const cancelar = () => { setEditando(false); limparArrasto() }
+  const redefinir = () => setRascunho(ITENS_PADRAO)
   const salvarEdicao = async () => {
-    await salvar({ metricas: rascunhoMetricas, graficos: rascunhoGraficos })
+    await salvar({ itens: rascunho })
     setEditando(false)
-    setAlvoDrop(null)
+    limparArrasto()
   }
 
-  const alternarMetrica = (id) => {
-    setRascunhoMetricas((atual) => atual.includes(id) ? atual.filter((m) => m !== id) : [...atual, id])
-  }
-  const alternarGrafico = (id) => {
-    setRascunhoGraficos((atual) => atual.includes(id) ? atual.filter((g) => g !== id) : [...atual, id])
-  }
+  // Clique no chip: remove se já está; senão adiciona (métrica entra antes
+  // do primeiro gráfico, gráfico entra no fim).
+  const alternarItem = useCallback((id) => {
+    setRascunho((atual) => {
+      if (atual.includes(id)) return atual.filter((x) => x !== id)
+      if (metricaPorId(id)) {
+        const primeiroGrafico = atual.findIndex((x) => graficoPorId(x))
+        if (primeiroGrafico >= 0) return [...atual.slice(0, primeiroGrafico), id, ...atual.slice(primeiroGrafico)]
+      }
+      return [...atual, id]
+    })
+  }, [])
 
-  // ===== Arrastar e soltar (HTML5 DnD) =====
+  // ===== Arrastar e soltar com pré-visualização (fantasma) =====
   const aoIniciarArrasto = useCallback((info) => { arrasto.current = info }, [])
 
-  const sobreCard = (e, index) => {
-    if (!arrasto.current || arrasto.current.tipo !== 'metrica') return
+  // posSem = posição do item sob o cursor na lista SEM o item arrastado
+  const sobreItem = (e, posSem, ehGrafico) => {
+    const info = arrasto.current
+    if (!info) return
     e.preventDefault()
     const rect = e.currentTarget.getBoundingClientRect()
-    const depois = e.clientX - rect.left > rect.width / 2
-    const pos = index + (depois ? 1 : 0)
-    alvoRef.current = pos
-    setAlvoDrop(pos)
+    const depois = ehGrafico
+      ? e.clientY - rect.top > rect.height / 2
+      : e.clientX - rect.left > rect.width / 2
+    const pos = posSem + (depois ? 1 : 0)
+    if (fantasmaRef.current?.pos !== pos || fantasmaRef.current?.id !== info.id) {
+      fantasmaRef.current = { id: info.id, pos }
+      setFantasma({ id: info.id, pos })
+    }
   }
 
   const soltarNaGrade = (e) => {
     e.preventDefault()
     const info = arrasto.current
-    arrasto.current = null
-    const destino = alvoRef.current
-    alvoRef.current = null
-    setAlvoDrop(null)
-    if (!info || info.tipo !== 'metrica') return
-    setRascunhoMetricas((atual) => {
-      const lista = atual.filter((m) => m !== info.id)
-      let pos = destino == null ? lista.length : destino
-      // ajusta a posição quando o item removido estava antes do destino
-      if (info.origem === 'grade' && info.index < (destino ?? atual.length)) pos = Math.max(0, pos - 1)
-      pos = Math.min(pos, lista.length)
+    const alvo = fantasmaRef.current
+    limparArrasto()
+    if (!info) return
+    setRascunho((atual) => {
+      const lista = atual.filter((x) => x !== info.id)
+      const pos = alvo ? Math.min(alvo.pos, lista.length) : lista.length
       lista.splice(pos, 0, info.id)
       return lista
     })
   }
+
+  // Lista exibida: sem o item arrastado, com o fantasma inserido na posição
+  // alvo — a grade real se reorganiza mostrando como ficaria ao soltar.
+  const exibicao = useMemo(() => {
+    if (!editando || !fantasma) return itens.map((id, i) => ({ id, fantasma: false, posSem: i }))
+    const sem = itens.filter((x) => x !== fantasma.id).map((id, i) => ({ id, fantasma: false, posSem: i }))
+    const pos = Math.min(fantasma.pos, sem.length)
+    sem.splice(pos, 0, { id: fantasma.id, fantasma: true, posSem: -1 })
+    return sem
+  }, [itens, editando, fantasma])
 
   const m = dados?.metricas
   const impostoManual = dados?.bruto?.config?.imposto_meta_usar_manual
@@ -103,6 +118,47 @@ export default function Dashboard() {
       case 'funil': return <FunilConversao etapas={dados.funil} />
       default: return null
     }
+  }
+
+  const renderItem = (item) => {
+    const defMetrica = metricaPorId(item.id)
+    const defGrafico = defMetrica ? null : graficoPorId(item.id)
+    if (!defMetrica && !defGrafico) return null
+
+    const classes = [
+      defGrafico ? `item-grafico ${GRAFICOS_LARGOS.has(item.id) ? 'largo' : ''}` : 'envelope-card',
+      editando ? 'arrastavel' : '',
+      item.fantasma ? 'fantasma' : '',
+    ].join(' ')
+
+    return (
+      <div
+        key={item.id}
+        className={classes}
+        style={item.fantasma ? { pointerEvents: 'none' } : undefined}
+        draggable={editando && !item.fantasma}
+        onDragStart={editando ? (e) => {
+          e.dataTransfer.setData('text/plain', item.id)
+          e.dataTransfer.effectAllowed = 'move'
+          aoIniciarArrasto({ origem: 'grade', id: item.id })
+        } : undefined}
+        onDragOver={editando ? (e) => sobreItem(e, item.posSem, !!defGrafico) : undefined}
+        onDragEnd={editando ? limparArrasto : undefined}
+      >
+        {editando && !item.fantasma && (
+          <button className="remover-card" title="Remover" onClick={() => alternarItem(item.id)}>×</button>
+        )}
+        {defMetrica ? (
+          <CardMetrica
+            rotulo={defMetrica.rotulo}
+            valor={formatarValor(defMetrica, m[item.id])}
+            cor={corDaMetrica(defMetrica, m[item.id])}
+            selo={defMetrica.selo || (item.id === 'impostoAds' ? (impostoManual ? 'manual' : 'auto') : undefined)}
+            descricao={defMetrica.descricao}
+          />
+        ) : renderGrafico(item.id)}
+      </div>
+    )
   }
 
   const conteudoPrincipal = dados && (
@@ -120,55 +176,14 @@ export default function Dashboard() {
       </div>
 
       <div
-        className={`grade-metricas ${editando ? 'em-edicao' : ''}`}
-        onDragOver={(e) => { if (arrasto.current?.tipo === 'metrica') e.preventDefault() }}
-        onDrop={soltarNaGrade}
+        className={`grade-dashboard ${editando ? 'em-edicao' : ''}`}
+        onDragOver={(e) => { if (arrasto.current) e.preventDefault() }}
+        onDrop={editando ? soltarNaGrade : undefined}
       >
-        {metricas.map((id, index) => {
-          const def = metricaPorId(id)
-          if (!def) return null
-          const valor = m[id]
-          const selo = def.selo || (id === 'impostoAds' ? (impostoManual ? 'manual' : 'auto') : undefined)
-          return (
-            <div
-              key={id}
-              className={`envelope-card ${editando ? 'arrastavel' : ''} ${alvoDrop === index ? 'drop-antes' : ''} ${alvoDrop === index + 1 && index === metricas.length - 1 ? 'drop-depois' : ''}`}
-              draggable={editando}
-              onDragStart={editando ? (e) => {
-                e.dataTransfer.setData('text/plain', id)
-                e.dataTransfer.effectAllowed = 'move'
-                aoIniciarArrasto({ tipo: 'metrica', origem: 'grade', id, index })
-              } : undefined}
-              onDragOver={editando ? (e) => sobreCard(e, index) : undefined}
-              onDragEnd={editando ? () => { arrasto.current = null; alvoRef.current = null; setAlvoDrop(null) } : undefined}
-            >
-              {editando && (
-                <button className="remover-card" title="Remover" onClick={() => alternarMetrica(id)}>×</button>
-              )}
-              <CardMetrica
-                rotulo={def.rotulo}
-                valor={formatarValor(def, valor)}
-                cor={corDaMetrica(def, valor)}
-                selo={selo}
-                descricao={def.descricao}
-              />
-            </div>
-          )
-        })}
-        {editando && metricas.length === 0 && (
-          <div className="grade-vazia">Arraste métricas do painel para cá</div>
+        {exibicao.map(renderItem)}
+        {editando && itens.length === 0 && (
+          <div className="grade-vazia">Arraste métricas e gráficos do painel para cá</div>
         )}
-      </div>
-
-      <div className="grade-graficos">
-        {graficos.map((id) => (
-          <div key={id} className={`envelope-grafico ${GRAFICOS_LARGOS.has(id) ? 'largo' : ''}`}>
-            {editando && (
-              <button className="remover-card" title="Remover" onClick={() => alternarGrafico(id)}>×</button>
-            )}
-            {renderGrafico(id)}
-          </div>
-        ))}
       </div>
     </>
   )
@@ -201,7 +216,7 @@ export default function Dashboard() {
       {carregando && !dados ? (
         <>
           <div className="card card-lucro-principal"><div className="skeleton" style={{ height: 60, width: '100%' }} /></div>
-          <div className="grade-metricas">
+          <div className="grade-dashboard">
             {Array.from({ length: 8 }).map((_, i) => (
               <div className="card card-metrica" key={i}><div className="skeleton" style={{ height: 40 }} /></div>
             ))}
@@ -210,10 +225,8 @@ export default function Dashboard() {
       ) : editando ? (
         <div className="layout-edicao">
           <PainelEdicao
-            metricas={rascunhoMetricas}
-            graficos={rascunhoGraficos}
-            aoAlternarMetrica={alternarMetrica}
-            aoAlternarGrafico={alternarGrafico}
+            itens={rascunho}
+            aoAlternarItem={alternarItem}
             aoIniciarArrasto={aoIniciarArrasto}
           />
           <div className="area-edicao">{conteudoPrincipal}</div>

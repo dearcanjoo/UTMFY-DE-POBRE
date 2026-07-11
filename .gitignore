@@ -3,3 +3,10 @@ dist/
 .env
 frontend/.env
 .DS_Store
+
+# Supabase CLI (estado local vinculado ao projeto)
+supabase/.temp/
+supabase/.branches/
+
+# Artefatos temporários do Vite
+frontend/*.timestamp-*.mjs

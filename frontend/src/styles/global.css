@@ -163,7 +163,11 @@ a.nav-item, a.nav-item:hover { text-decoration: none; }
 .card-lucro-principal .valor.negativo { color: #f5a894; }
 .card-lucro-principal .texto-suave { color: rgba(255, 255, 255, 0.55); position: relative; }
 
-.grade-metricas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+/* Grade unificada: métricas e gráficos misturados, na ordem do usuário */
+.grade-dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; align-items: stretch; }
+.grade-dashboard .item-grafico { grid-column: span 2; }
+.grade-dashboard .item-grafico.largo { grid-column: 1 / -1; }
+.grade-dashboard .item-grafico .card { height: 100%; }
 
 /* Cabeçalho do dashboard (título + personalizar) */
 .cabecalho-dashboard { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
@@ -372,16 +376,48 @@ a.nav-item, a.nav-item:hover { text-decoration: none; }
   padding: 20px;
   background: var(--grafite);
 }
-.tela-login .card { width: 100%; max-width: 400px; padding: 36px 30px; border: none; border-radius: 18px; box-shadow: var(--sombra-alta); }
-.login-marca { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 26px; }
+.tela-login .card { width: 100%; max-width: 420px; padding: 34px 32px 30px; border: none; border-radius: 18px; box-shadow: var(--sombra-alta); }
+.login-marca { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 20px; }
 .login-marca .marca-nome {
   font-size: 24px; font-weight: 600; letter-spacing: -0.01em;
   color: var(--texto);
 }
+.login-sub { text-align: center; max-width: 300px; }
+.login-titulo {
+  font-size: 16px; font-weight: 600; color: var(--texto);
+  text-align: center; margin-bottom: 18px;
+}
+
+/* Campo de senha com botão de mostrar/ocultar */
+.campo-senha { position: relative; }
+.campo-senha input { padding-right: 46px; }
+.campo-senha .olho {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; color: var(--texto-suave);
+  border-radius: 8px; transition: color 0.15s ease, background 0.15s ease;
+}
+.campo-senha .olho:hover { color: var(--texto); background: var(--bg-inset); }
+
+/* Medidor de força da senha */
+.forca-senha { display: flex; align-items: center; gap: 9px; margin-top: 8px; }
+.forca-barras { display: flex; gap: 4px; flex: 1; }
+.forca-barra {
+  height: 4px; flex: 1; border-radius: 99px; background: var(--borda-forte);
+  transition: background 0.2s ease;
+}
+.forca-barra.ativa.n1 { background: var(--vermelho); }
+.forca-barra.ativa.n2 { background: #e8912f; }
+.forca-barra.ativa.n3 { background: var(--amarelo); }
+.forca-barra.ativa.n4 { background: var(--verde); }
+.forca-rotulo { font-size: 11px; font-weight: 600; color: var(--texto-suave); min-width: 48px; text-align: right; }
+
+.campo-aviso { display: block; font-size: 11.5px; color: var(--vermelho); margin-top: 6px; }
+
+.login-esqueci { text-align: right; margin-top: -4px; margin-bottom: 16px; font-size: 12.5px; }
+.login-troca { text-align: center; margin-top: 18px; }
 
 /* ===== Gráficos do dashboard ===== */
-.grade-graficos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
-.grade-graficos .largo { grid-column: 1 / -1; }
 .card-grafico { padding: 16px 18px; }
 .titulo-grafico {
   color: var(--texto-suave); font-size: 11px; font-weight: 600;
@@ -431,7 +467,9 @@ a.nav-item, a.nav-item:hover { text-decoration: none; }
 
 .layout-edicao { display: flex; gap: 14px; align-items: flex-start; }
 .area-edicao { flex: 1; min-width: 0; }
-.area-edicao .grade-metricas { grid-template-columns: repeat(3, 1fr); }
+.area-edicao .grade-dashboard { grid-template-columns: repeat(3, 1fr); }
+.area-edicao .grade-dashboard .item-grafico { grid-column: span 2; }
+.area-edicao .grade-dashboard .item-grafico.largo { grid-column: 1 / -1; }
 
 .painel-edicao {
   width: 250px; flex-shrink: 0;
@@ -461,17 +499,18 @@ a.nav-item, a.nav-item:hover { text-decoration: none; }
 .chip-edicao.ativa .chip-sinal { color: var(--amarelo); opacity: 1; }
 
 /* Cards no modo de edição */
-.envelope-card, .envelope-grafico { position: relative; min-width: 0; }
-.envelope-card.arrastavel { cursor: grab; }
-.envelope-card.arrastavel:active { cursor: grabbing; }
-.grade-metricas.em-edicao .card-metrica { border-style: dashed; border-color: var(--borda-forte); }
-.envelope-card.drop-antes::before,
-.envelope-card.drop-depois::after {
-  content: ''; position: absolute; top: 4px; bottom: 4px; width: 3px;
-  background: var(--verde); border-radius: 99px; z-index: 5;
+.envelope-card, .item-grafico { position: relative; min-width: 0; }
+.arrastavel { cursor: grab; }
+.arrastavel:active { cursor: grabbing; }
+.grade-dashboard.em-edicao .card { border-style: dashed; border-color: var(--borda-forte); }
+
+/* Fantasma: pré-visualização do item na posição em que seria solto */
+.fantasma { opacity: 0.55; }
+.fantasma::after {
+  content: ''; position: absolute; inset: 0; z-index: 5;
+  border: 2px dashed var(--verde); border-radius: var(--radius);
+  background: rgba(13, 165, 102, 0.06);
 }
-.envelope-card.drop-antes::before { left: -6.5px; }
-.envelope-card.drop-depois::after { right: -6.5px; }
 .remover-card {
   position: absolute; top: -7px; right: -7px; z-index: 6;
   width: 20px; height: 20px; border-radius: 99px;
@@ -485,6 +524,31 @@ a.nav-item, a.nav-item:hover { text-decoration: none; }
   color: var(--texto-suave); font-size: 12.5px;
   border: 1.5px dashed var(--borda-forte); border-radius: var(--radius);
 }
+
+/* ===== Tooltip "i" das métricas ===== */
+.info-dica {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; flex-shrink: 0;
+  border: 1px solid var(--borda-forte); border-radius: 99px;
+  font-size: 9px; font-weight: 600; font-style: normal;
+  color: var(--texto-suave); cursor: help; user-select: none;
+}
+.info-dica:hover { border-color: var(--grafite); color: var(--grafite); }
+.info-balao {
+  display: none; position: absolute; bottom: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%); z-index: 40;
+  width: 210px; padding: 9px 11px;
+  background: var(--grafite); color: #fff;
+  border-radius: 9px; font-size: 11px; font-weight: 400; line-height: 1.5;
+  letter-spacing: 0; text-transform: none; white-space: normal; text-align: left;
+  box-shadow: 0 6px 20px rgba(18, 24, 20, 0.25);
+  pointer-events: none;
+}
+.info-balao::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--grafite);
+}
+.info-dica:hover .info-balao { display: block; }
 
 /* ===== MOBILE ===== */
 @media (max-width: 768px) {
@@ -503,18 +567,19 @@ a.nav-item, a.nav-item:hover { text-decoration: none; }
   .nav-inferior .nav-item svg { width: 22px; height: 22px; }
   .conteudo { padding: 18px 14px 92px; }
   .titulo-pagina { font-size: 19px; }
-  .grade-metricas { grid-template-columns: repeat(2, 1fr); }
+  .grade-dashboard { grid-template-columns: repeat(2, 1fr); }
+  .grade-dashboard .item-grafico, .grade-dashboard .item-grafico.largo { grid-column: 1 / -1; }
   .card-lucro-principal .valor { font-size: 30px; }
   .seletor-periodo { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
   .seletor-periodo button { white-space: nowrap; flex-shrink: 0; }
   .modal-fundo { padding: 0; align-items: flex-end; }
   .modal { max-width: none; border-radius: 16px 16px 0 0; max-height: 88vh; }
-  .grade-graficos { grid-template-columns: 1fr; }
   .corpo-grafico-pizza { flex-direction: column; }
   .corpo-grafico-pizza > div:first-child { width: 100% !important; }
   .layout-edicao { flex-direction: column; }
   .painel-edicao { width: 100%; position: static; max-height: 300px; }
-  .area-edicao .grade-metricas { grid-template-columns: repeat(2, 1fr); }
+  .area-edicao .grade-dashboard { grid-template-columns: repeat(2, 1fr); }
+  .area-edicao .grade-dashboard .item-grafico, .area-edicao .grade-dashboard .item-grafico.largo { grid-column: 1 / -1; }
   .barra-edicao { flex-direction: column; align-items: stretch; gap: 8px; }
   .barra-edicao-acoes { justify-content: flex-end; flex-wrap: wrap; }
   .funil-pct { font-size: 12px; }

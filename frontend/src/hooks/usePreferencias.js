@@ -1,21 +1,27 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase.js'
-import { METRICAS_PADRAO, metricaPorId, GRAFICOS_PADRAO, graficoPorId } from '../lib/metricas.js'
+import { METRICAS_PADRAO, GRAFICOS_PADRAO, ITENS_PADRAO, metricaPorId, graficoPorId } from '../lib/metricas.js'
 
 const CHAVE_LOCAL = 'macacofy_dashboard_metricas'
 
-const PADRAO = { metricas: METRICAS_PADRAO, graficos: GRAFICOS_PADRAO }
+const PADRAO = { itens: ITENS_PADRAO }
 
-// Aceita o formato antigo (array de métricas) e o novo ({ metricas, graficos })
+const itemValido = (id) => metricaPorId(id) || graficoPorId(id)
+
+// Aceita três formatos:
+//  v1: array de ids de métricas
+//  v2: { metricas: [], graficos: [] }
+//  v3: { itens: [] } — lista única ordenada (métricas e gráficos misturados)
 function normalizar(raw) {
   if (Array.isArray(raw)) {
     const metricas = raw.filter((id) => metricaPorId(id))
-    return metricas.length ? { metricas, graficos: GRAFICOS_PADRAO } : null
+    return metricas.length ? { itens: [...metricas, ...GRAFICOS_PADRAO] } : null
   }
   if (raw && typeof raw === 'object') {
+    if (Array.isArray(raw.itens)) return { itens: raw.itens.filter(itemValido) }
     const metricas = (Array.isArray(raw.metricas) ? raw.metricas : METRICAS_PADRAO).filter((id) => metricaPorId(id))
     const graficos = (Array.isArray(raw.graficos) ? raw.graficos : GRAFICOS_PADRAO).filter((id) => graficoPorId(id))
-    return { metricas, graficos }
+    return { itens: [...metricas, ...graficos] }
   }
   return null
 }
@@ -27,7 +33,7 @@ function lerLocal() {
   } catch { return null }
 }
 
-// Preferências do dashboard (quais métricas/gráficos e em que ordem).
+// Preferências do dashboard (quais itens e em que ordem).
 // localStorage dá resposta instantânea; o banco sincroniza entre dispositivos.
 export function usePreferencias(usuario) {
   const [prefs, setPrefs] = useState(() => lerLocal() || PADRAO)
@@ -56,5 +62,5 @@ export function usePreferencias(usuario) {
     }
   }, [usuario])
 
-  return { metricas: prefs.metricas, graficos: prefs.graficos, salvar }
+  return { itens: prefs.itens, salvar }
 }
