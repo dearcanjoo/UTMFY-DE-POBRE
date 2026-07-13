@@ -49,10 +49,13 @@ export function calcularMetricas({ vendas = [], gastos = [], custos = [], inicio
   // Custos da operação: fixo mensal é rateado pró-rata; pontual entra se a data cai no período
   const custosOperacao = calcularCustosOperacao(custos, inicio, fim)
 
-  const custoTotal = gastoAds + impostoAds + custosOperacao + reembolsos
+  // Reembolsos NÃO entram no custo: o faturamento já é só das vendas
+  // aprovadas, então a venda estornada nem soma. Subtrair de novo = contar
+  // duas vezes. reembolsos/valorReembolsado ficam só como informativo (risco).
+  const custoTotal = gastoAds + impostoAds + custosOperacao
 
   // LUCRO LÍQUIDO REAL
-  const lucro = faturamento - reembolsos - gastoAds - impostoAds - custosOperacao
+  const lucro = faturamento - gastoAds - impostoAds - custosOperacao
 
   const numVendas = aprovadas.length
   const dias = Math.max(1, diasNoIntervalo(inicio, fim))
@@ -210,13 +213,13 @@ export function vendasPorHorario({ vendas = [] }) {
 
 /**
  * Lucro por hora do dia (aproximação): comissão por hora menos o custo
- * total do período (gasto + imposto + custos operacionais + reembolsos)
+ * total do período (gasto + imposto + custos operacionais)
  * distribuído uniformemente pelas 24h. A Meta não fornece gasto por hora
  * via API padrão, então a distribuição uniforme é a melhor estimativa.
  */
 export function lucroPorHorario({ vendas = [], gastos = [], custos = [], inicio, fim, config = {} }) {
   const m = calcularMetricas({ vendas, gastos, custos, inicio, fim, config })
-  const custoPorHora = (m.gastoAds + m.impostoAds + m.custosOperacao + m.reembolsos) / 24
+  const custoPorHora = (m.gastoAds + m.impostoAds + m.custosOperacao) / 24
   return vendasPorHorario({ vendas }).map((h) => ({
     hora: h.hora,
     lucro: h.faturamento - custoPorHora,

@@ -24,7 +24,7 @@ export const CATEGORIAS = [
 export const CATALOGO = [
   // ===== Resultado =====
   { id: 'lucro', rotulo: 'Lucro líquido', categoria: 'resultado', formato: 'moeda', semantica: 'lucro',
-    descricao: 'Faturamento menos estornos, anúncios, imposto e custos da operação.' },
+    descricao: 'Faturamento menos anúncios, imposto e custos da operação. Vendas estornadas já não entram no faturamento.' },
   { id: 'margem', rotulo: 'Margem de lucro', categoria: 'resultado', formato: 'pct', semantica: 'lucro',
     descricao: 'Lucro dividido pelo faturamento.' },
   { id: 'roi', rotulo: 'ROI real', categoria: 'resultado', formato: 'pct', semantica: 'lucro',
@@ -50,7 +50,7 @@ export const CATALOGO = [
   { id: 'roas', rotulo: 'ROAS', categoria: 'anuncios', formato: 'num', semantica: 'bom-alto', limiar: 1,
     descricao: 'Faturamento líquido dividido pelo gasto em anúncios.' },
   { id: 'cpa', rotulo: 'CPA real', categoria: 'anuncios', formato: 'moeda', semantica: 'neutro',
-    descricao: 'Custo total (anúncios + imposto + operação + estornos) dividido pelas vendas aprovadas. Quanto custa, de verdade, cada venda.' },
+    descricao: 'Custo total (anúncios + imposto + operação) dividido pelas vendas aprovadas. Quanto custa, de verdade, cada venda.' },
   { id: 'impostoAds', rotulo: 'Imposto sobre mídia', categoria: 'anuncios', formato: 'moeda', semantica: 'custo',
     descricao: 'Imposto pago sobre o gasto de anúncios (percentual configurado ou valor manual).' },
   { id: 'gastoDiarioMedio', rotulo: 'Gasto diário médio', categoria: 'anuncios', formato: 'moeda', semantica: 'neutro',
@@ -58,7 +58,7 @@ export const CATALOGO = [
 
   // ===== Custos =====
   { id: 'custoTotal', rotulo: 'Custo total', categoria: 'custos', formato: 'moeda', semantica: 'custo',
-    descricao: 'Ads + imposto + custos da operação + estornos.' },
+    descricao: 'Ads + imposto + custos da operação.' },
   { id: 'custosOperacao', rotulo: 'Custos da operação', categoria: 'custos', formato: 'moeda', semantica: 'custo',
     descricao: 'Ferramentas e custos manuais (fixos rateados + pontuais).' },
   { id: 'taxasPagas', rotulo: 'Taxas da Cakto', categoria: 'custos', formato: 'moeda', semantica: 'neutro', selo: 'info',

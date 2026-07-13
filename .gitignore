@@ -10,3 +10,6 @@ supabase/.branches/
 
 # Artefatos temporários do Vite
 frontend/*.timestamp-*.mjs
+.DS_Store
+fotos unicamp/
+fotos uerj/
