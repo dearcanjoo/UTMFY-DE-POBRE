@@ -92,7 +92,9 @@ function metricasDia(vendas: any[], gastos: any[], custos: any[], cfg: any, dia:
     if (c.tipo === "fixo_mensal") custosOp += valor / diasNoMes(dia);
     else if (c.data_referencia === dia) custosOp += valor;
   }
-  const lucro = faturamento - reembolsos - gastoAds - impostoAds - custosOp;
+  // O faturamento já é só das vendas aprovadas (estornadas nem somam), então
+  // NÃO se subtrai reembolsos de novo. Espelha exatamente o lucro do dashboard.
+  const lucro = faturamento - gastoAds - impostoAds - custosOp;
   return { faturamento, reembolsos, gastoAds, impostoAds, custosOp, lucro };
 }
 
@@ -102,17 +104,17 @@ function montarMensagem(job: string, m: any, nome: string) {
   if (job === "diario") {
     if (m.lucro >= 0) {
       return { title: "MacacoFy · Fechamento de ontem", tag: "relatorio-diario",
-        body: `Bom dia${oi}! Ontem você faturou ${fat}, investiu ${gasto} em anúncios e lucrou ${lucro}. Parabéns! 🎉` };
+        body: `Fechamento de ontem${oi}. Faturamento de ${fat}, investimento em anúncios de ${gasto} e lucro líquido de ${lucro}.` };
     }
     return { title: "MacacoFy · Fechamento de ontem", tag: "relatorio-diario",
-      body: `Bom dia${oi}. Ontem fechou no vermelho: faturou ${fat}, investiu ${gasto} — prejuízo de ${lucro}. Faz parte do jogo; hoje é página nova. 💪` };
+      body: `Fechamento de ontem${oi}. Faturamento de ${fat}, investimento em anúncios de ${gasto} e prejuízo de ${lucro}.` };
   }
   if (m.lucro >= 0) {
     return { title: "MacacoFy · Lucro do dia", tag: "relatorio-parcial",
-      body: `Parabéns${oi}! Até agora você investiu ${gasto} em anúncios e retornou ${fat}. Lucro do dia até o momento: ${lucro} 🚀` };
+      body: `Resultado de hoje até o momento${oi}. Investimento de ${gasto} em anúncios, faturamento de ${fat} e lucro de ${lucro}.` };
   }
   return { title: "MacacoFy · Lucro do dia", tag: "relatorio-parcial",
-    body: `${nome ? nome + ", o" : "O"} dia ainda está no vermelho: investiu ${gasto}, retornou ${fat} — prejuízo de ${lucro} até agora. O dia não acabou, dá pra virar. 💪` };
+    body: `Resultado de hoje até o momento${oi}. Investimento de ${gasto} em anúncios, faturamento de ${fat} e prejuízo de ${lucro}.` };
 }
 
 async function enviar(admin: any, sub: any, payload: unknown) {

@@ -4,13 +4,15 @@ const Icone = ({ d }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
 )
 
-// Marca MacacoFy: quadrado amarelo banana com arco em verde-grafite
+// Marca MacacoFy: ícone oficial (macaco + gráfico) em fundo verde-escuro
 export const MarcaMacacoFy = ({ tamanho = 30 }) => (
-  <svg width={tamanho} height={tamanho} viewBox="0 0 32 32" aria-hidden="true">
-    <rect width="32" height="32" rx="9" fill="#f2c53d" />
-    <path d="M8 19c3.6 4.4 10 4.2 14-2" stroke="#121814" strokeWidth="3.4" strokeLinecap="round" fill="none" />
-    <circle cx="23.2" cy="15.4" r="1.7" fill="#121814" />
-  </svg>
+  <img
+    src="/icons/marca-macacofy.png"
+    width={tamanho}
+    height={tamanho}
+    alt="MacacoFy"
+    style={{ borderRadius: Math.round(tamanho * 0.28), display: 'block', flexShrink: 0 }}
+  />
 )
 
 const ITENS = [

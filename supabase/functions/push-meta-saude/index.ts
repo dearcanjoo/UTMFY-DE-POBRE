@@ -61,8 +61,8 @@ Deno.serve(async (req) => {
           alertas.push({
             tipo: "meta_bloqueio", chave: actId,
             payload: {
-              title: "⚠️ Conta de anúncio parada", tag: `meta-bloqueio-${actId}`, url: "/",
-              body: `A conta "${nome}" parou de rodar: ${textoStatus(status)}${motivo ? ` — ${textoMotivo(motivo)}` : ""}. Verifique no Gerenciador de Anúncios.`,
+              title: "Conta de anúncio parada", tag: `meta-bloqueio-${actId}`, url: "/",
+              body: `A conta "${nome}" parou de rodar: ${textoStatus(status)}${motivo ? `. Motivo: ${textoMotivo(motivo)}` : ""}. Verifique no Gerenciador de Anúncios.`,
             },
           });
           continue; // conta parada já é o alerta mais grave; não duplica com saldo
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
           alertas.push({
             tipo: "meta_cartao", chave: actId,
             payload: {
-              title: "⚠️ Cobrança recusada", tag: `meta-cartao-${actId}`, url: "/",
+              title: "Cobrança recusada", tag: `meta-cartao-${actId}`, url: "/",
               body: `A conta "${nome}" está com pagamento pendente/recusado (${textoStatus(status)}). Atualize o cartão ou adicione saldo para os anúncios continuarem.`,
             },
           });
@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
           alertas.push({
             tipo: "meta_saldo", chave: actId,
             payload: {
-              title: "⚠️ Saldo baixo", tag: `meta-saldo-${actId}`, url: "/",
+              title: "Saldo baixo", tag: `meta-saldo-${actId}`, url: "/",
               body: `A conta "${nome}" está com saldo de ${brl(saldo)} (abaixo de ${brl(LIMITE_SALDO)}). Adicione saldo via Pix para os anúncios não pausarem.`,
             },
           });
