@@ -7,6 +7,7 @@ import DefinirUsuario from './components/DefinirUsuario.jsx'
 import Login from './pages/Login.jsx'
 import DefinirNovaSenha from './pages/DefinirNovaSenha.jsx'
 import Dashboard from './pages/Dashboard.jsx'
+import Campanhas from './pages/Campanhas.jsx'
 import Produtos from './pages/Produtos.jsx'
 import Integracoes from './pages/Integracoes.jsx'
 import Custos from './pages/Custos.jsx'
@@ -67,6 +68,7 @@ export default function App() {
       <main className="conteudo">
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/campanhas" element={<Campanhas />} />
           <Route path="/produtos" element={<Produtos />} />
           <Route path="/integracoes" element={<Integracoes usuario={usuario} />} />
           <Route path="/custos" element={<Custos usuario={usuario} />} />

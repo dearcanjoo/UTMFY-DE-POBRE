@@ -1,6 +1,10 @@
 // Webhook da Cakto — recebe eventos de venda em tempo real.
 // Auth própria: ?u=<usuario_id>&s=<webhook_secret> (validado contra a tabela conexoes).
+// Extra: em venda aprovada, dispara o evento Purchase para o Pixel do Meta
+// via API de Conversões (CAPI), com dados do comprador hasheados (SHA-256).
 import { createClient } from "npm:@supabase/supabase-js@2";
+
+const GRAPH = "https://graph.facebook.com/v19.0";
 
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json" } });
@@ -30,10 +34,122 @@ Deno.serve(async (req) => {
   const venda = parseCakto(payload, usuarioId);
   if (!venda) return json({ ok: true, ignorado: true });
 
+  // Não sobrescreve o carimbo do CAPI: checa antes se esta venda já foi enviada.
+  const { data: existente } = await admin
+    .from("vendas").select("capi_enviado_em")
+    .eq("usuario_id", usuarioId).eq("transacao_id", venda.transacao_id).maybeSingle();
+
   const { error } = await admin.from("vendas").upsert(venda, { onConflict: "usuario_id,transacao_id" });
   if (error) return json({ error: error.message }, 500);
-  return json({ ok: true });
+
+  // ===== CAPI: Purchase server-side (exclusivamente via API, como a UTMify) =====
+  let capi: string | undefined;
+  if (venda.status === "aprovada" && !existente?.capi_enviado_em) {
+    capi = await enviarPurchaseCapi(admin, usuarioId, venda, payload?.data ?? payload ?? {});
+  }
+
+  return json({ ok: true, capi });
 });
+
+// Envia o Purchase à API de Conversões do Meta. Retorna um resumo para o log.
+async function enviarPurchaseCapi(admin: any, usuarioId: string, venda: any, d: any): Promise<string> {
+  const { data: cfg } = await admin
+    .from("config_custos").select("pixel_id, capi_token, capi_ativo")
+    .eq("usuario_id", usuarioId).maybeSingle();
+  if (!cfg?.capi_ativo || !cfg?.pixel_id || !cfg?.capi_token) return "desativado";
+
+  try {
+    const cliente = d.customer ?? {};
+    const user_data: Record<string, unknown> = {};
+
+    const email = normalizarEmail(cliente.email);
+    if (email) user_data.em = [await sha256(email)];
+
+    const fone = normalizarTelefone(cliente.phone ?? cliente.cellphone ?? cliente.phone_number);
+    if (fone) user_data.ph = [await sha256(fone)];
+
+    const nome = normalizarNome(cliente.name ?? cliente.fullName);
+    if (nome.fn) user_data.fn = [await sha256(nome.fn)];
+    if (nome.ln) user_data.ln = [await sha256(nome.ln)];
+
+    const docOuId = String(cliente.id ?? cliente.docNumber ?? cliente.document ?? "").trim();
+    if (docOuId) user_data.external_id = [await sha256(docOuId)];
+    user_data.country = [await sha256("br")];
+
+    if (Object.keys(user_data).length < 2) return "sem dados do comprador";
+
+    // event_time: máx. 7 dias no passado, nunca no futuro
+    const agora = Math.floor(Date.now() / 1000);
+    let eventTime = Math.floor(new Date(venda.data_venda).getTime() / 1000) || agora;
+    if (eventTime > agora || agora - eventTime > 6 * 86400) eventTime = agora;
+
+    const evento = {
+      event_name: "Purchase",
+      event_time: eventTime,
+      event_id: `cakto_${venda.transacao_id}`, // deduplicação
+      action_source: "website",
+      event_source_url: d.checkoutUrl ?? undefined,
+      user_data,
+      custom_data: {
+        currency: "BRL",
+        value: Number(venda.valor_cheio ?? venda.valor_comissao) || 0,
+        content_name: venda.produto_nome ?? undefined,
+        content_ids: venda.produto_id_cakto ? [venda.produto_id_cakto] : undefined,
+        content_type: "product",
+      },
+    };
+
+    const r = await fetch(`${GRAPH}/${cfg.pixel_id}/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: [evento], access_token: cfg.capi_token }),
+    });
+    const body = await r.json();
+
+    if (r.ok && body.events_received >= 1) {
+      await admin.from("vendas")
+        .update({ capi_enviado_em: new Date().toISOString(), capi_erro: null })
+        .eq("usuario_id", usuarioId).eq("transacao_id", venda.transacao_id);
+      return "enviado";
+    }
+    const msg = body?.error?.message ?? `HTTP ${r.status}`;
+    await admin.from("vendas").update({ capi_erro: String(msg).slice(0, 300) })
+      .eq("usuario_id", usuarioId).eq("transacao_id", venda.transacao_id);
+    return `erro: ${msg}`;
+  } catch (e) {
+    const msg = (e as Error).message;
+    await admin.from("vendas").update({ capi_erro: msg.slice(0, 300) })
+      .eq("usuario_id", usuarioId).eq("transacao_id", venda.transacao_id);
+    return `erro: ${msg}`;
+  }
+}
+
+// ===== Normalização no padrão do Meta (antes do hash) =====
+function normalizarEmail(v: unknown): string | null {
+  const s = typeof v === "string" ? v.trim().toLowerCase() : "";
+  return s.includes("@") ? s : null;
+}
+
+function normalizarTelefone(v: unknown): string | null {
+  let s = typeof v === "string" ? v.replace(/\D/g, "") : "";
+  if (!s) return null;
+  if (s.length === 10 || s.length === 11) s = "55" + s; // DDD sem código do país
+  return s.length >= 12 ? s : null;
+}
+
+function normalizarNome(v: unknown): { fn: string | null; ln: string | null } {
+  const s = typeof v === "string"
+    ? v.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    : "";
+  if (!s) return { fn: null, ln: null };
+  const partes = s.split(/\s+/);
+  return { fn: partes[0] || null, ln: partes.length > 1 ? partes[partes.length - 1] : null };
+}
+
+async function sha256(s: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 function parseCakto(p: any, usuarioId: string) {
   const d = p?.data ?? p ?? {};
@@ -67,6 +183,22 @@ function parseCakto(p: any, usuarioId: string) {
     metodo_pagamento: d.paymentMethod ?? d.payment_method ?? null,
     data_venda: d.paidAt ?? d.approvedDate ?? d.createdAt ?? d.created_at ?? new Date().toISOString(),
     payload: p,
+    ...extrairUtms(d),
+  };
+}
+
+// UTMs capturadas pelo checkout da Cakto (atribuição por criativo)
+function extrairUtms(d: any) {
+  const limpar = (v: unknown) => {
+    const s = typeof v === "string" ? v.trim() : "";
+    return s || null;
+  };
+  return {
+    utm_source: limpar(d.utm_source),
+    utm_medium: limpar(d.utm_medium),
+    utm_campaign: limpar(d.utm_campaign),
+    utm_content: limpar(d.utm_content),
+    utm_term: limpar(d.utm_term),
   };
 }
 

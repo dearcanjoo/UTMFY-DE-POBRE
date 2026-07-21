@@ -585,6 +585,87 @@ a.nav-item, a.nav-item:hover { text-decoration: none; }
 }
 .info-dica:hover .info-balao { display: block; }
 
+/* ===== Aba Campanhas ===== */
+.tabela-campanhas-envelope { padding: 0; overflow-x: auto; }
+.tabela-campanhas { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.tabela-campanhas th {
+  text-align: right; padding: 11px 12px; white-space: nowrap;
+  font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--texto-suave); border-bottom: 1px solid var(--borda);
+  position: sticky; top: 0; background: var(--bg-card); z-index: 2;
+}
+.tabela-campanhas th.col-nome { text-align: left; }
+.tabela-campanhas td {
+  padding: 9px 12px; text-align: right; white-space: nowrap;
+  border-bottom: 1px solid var(--borda);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.tabela-campanhas td.col-nome { text-align: left; max-width: 340px; }
+.tabela-campanhas tr:last-child td { border-bottom: none; }
+.tabela-campanhas tr.expansivel { cursor: pointer; }
+.tabela-campanhas tr.expansivel:hover td { background: var(--bg); }
+.tabela-campanhas tr.nivel-0 .nome-no { font-weight: 600; }
+.tabela-campanhas tr.nivel-1 { background: rgba(18, 24, 20, 0.015); }
+.tabela-campanhas tr.nivel-1 .nome-no { font-weight: 500; }
+.tabela-campanhas tr.nivel-2 { background: rgba(18, 24, 20, 0.03); }
+.tabela-campanhas tr.nivel-2 .nome-no { color: var(--texto-suave); }
+.tabela-campanhas .nome-no {
+  display: inline-block; max-width: 280px; overflow: hidden;
+  text-overflow: ellipsis; vertical-align: middle;
+}
+.seta-expandir {
+  display: inline-block; width: 16px; color: var(--texto-suave);
+  transition: transform 0.15s ease; vertical-align: middle;
+}
+.seta-expandir.aberta { transform: rotate(90deg); }
+.seta-espaco { display: inline-block; width: 16px; }
+.tabela-campanhas td.positivo { color: var(--verde); font-weight: 600; }
+.tabela-campanhas td.negativo { color: var(--vermelho); font-weight: 600; }
+.tabela-campanhas .linha-total td {
+  border-top: 2px solid var(--borda-forte); font-weight: 600;
+  background: var(--bg);
+}
+.notas-atribuicao { margin-top: 10px; font-size: 12px; line-height: 1.5; }
+
+/* Filtros da aba Campanhas (status + conta) */
+.filtros-campanhas {
+  display: flex; align-items: center; gap: 10px;
+  margin: 2px 0 12px; flex-wrap: wrap;
+}
+.alternador-status {
+  display: inline-flex; background: var(--bg-card);
+  border: 1px solid var(--borda); border-radius: 10px; padding: 3px; gap: 2px;
+}
+.alternador-status button {
+  border: none; background: transparent; cursor: pointer;
+  font-family: var(--fonte); font-size: 12.5px; font-weight: 500;
+  color: var(--texto-suave); padding: 6px 14px; border-radius: 8px;
+}
+.alternador-status button.ativo {
+  background: var(--grafite); color: #fff; font-weight: 600;
+}
+.seletor-conta {
+  font-family: var(--fonte); font-size: 12.5px; font-weight: 500;
+  color: var(--texto); background: var(--bg-card);
+  border: 1px solid var(--borda); border-radius: 10px;
+  padding: 8px 12px; cursor: pointer; max-width: 260px;
+}
+.seletor-conta:focus { outline: 2px solid var(--verde); outline-offset: 1px; }
+
+/* Selo de status (pausada, arquivada...) e linhas inativas */
+.selo-status {
+  display: inline-block; margin-left: 8px; padding: 2px 8px;
+  font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+  background: var(--amarelo-suave); color: var(--amarelo-tinta); border-radius: 99px;
+  vertical-align: middle;
+}
+.tabela-campanhas tr.inativa .nome-no { opacity: 0.6; }
+
+/* Estado vazio */
+.estado-vazio { text-align: center; padding: 36px 24px; }
+.estado-vazio-titulo { font-weight: 600; font-size: 14.5px; margin-bottom: 8px; }
+.estado-vazio .texto-suave { font-size: 12.5px; max-width: 460px; margin: 0 auto; line-height: 1.6; }
+
 /* ===== MOBILE ===== */
 @media (max-width: 768px) {
   .nav-lateral { display: none; }
@@ -619,6 +700,10 @@ a.nav-item, a.nav-item:hover { text-decoration: none; }
   .barra-edicao-acoes { justify-content: flex-end; flex-wrap: wrap; }
   .funil-pct { font-size: 12px; }
   .funil-nome { font-size: 9px; }
+  .filtros-campanhas { gap: 8px; }
+  .seletor-conta { max-width: 100%; flex: 1; }
+  .tabela-campanhas { font-size: 11.5px; }
+  .tabela-campanhas .nome-no { max-width: 160px; }
 }
 
 /* ===== Ranking: pódio ===== */

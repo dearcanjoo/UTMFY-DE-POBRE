@@ -41,6 +41,7 @@ Deno.serve(async (req) => {
   const inicio = new Date(Date.now() - 35 * 86400000).toISOString().slice(0, 10);
 
   let registros = 0;
+  let registrosAnuncios = 0;
   const erros: string[] = [];
 
   for (const contaId of contas) {
@@ -64,13 +65,91 @@ Deno.serve(async (req) => {
         }, { onConflict: "usuario_id,conta_ads_id,data" });
         if (!error) registros++;
       }
+      registrosAnuncios += await sincronizarAnuncios(
+        admin, user.id, contaId, actId, con.token_acesso, inicio, hoje, erros,
+      );
+      await sincronizarStatus(admin, user.id, contaId, actId, con.token_acesso, erros);
     } catch (e) {
       erros.push(`${actId}: ${(e as Error).message}`);
     }
   }
 
-  return json({ ok: true, dias: registros, erros: erros.length ? erros : undefined });
+  return json({ ok: true, dias: registros, anuncios: registrosAnuncios, erros: erros.length ? erros : undefined });
 });
+
+// Insights por ANÚNCIO (campanha > conjunto > anúncio) — alimenta a aba Campanhas.
+async function sincronizarAnuncios(
+  admin: any, usuarioId: string, contaId: string, actId: string,
+  token: string, inicio: string, hoje: string, erros: string[],
+): Promise<number> {
+  const timeRange = encodeURIComponent(JSON.stringify({ since: inicio, until: hoje }));
+  const campos = "spend,inline_link_clicks,actions,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name";
+  let url: string | null =
+    `${GRAPH}/${actId}/insights?level=ad&time_increment=1&fields=${campos}&time_range=${timeRange}&limit=500&access_token=${token}`;
+  let n = 0;
+  for (let pagina = 0; url && pagina < 10; pagina++) {
+    const r = await fetch(url);
+    const body = await r.json();
+    if (!r.ok) { erros.push(`${actId} (anúncios): ${body?.error?.message ?? "erro"}`); break; }
+    const linhas: any[] = body.data ?? [];
+    if (linhas.length) {
+      const registros = linhas
+        .filter((l) => l.ad_id)
+        .map((linha) => ({
+          usuario_id: usuarioId,
+          conta_ads_id: contaId,
+          data: linha.date_start,
+          anuncio_id: String(linha.ad_id),
+          anuncio_nome: linha.ad_name ?? null,
+          conjunto_id: linha.adset_id ? String(linha.adset_id) : null,
+          conjunto_nome: linha.adset_name ?? null,
+          campanha_id: linha.campaign_id ? String(linha.campaign_id) : null,
+          campanha_nome: linha.campaign_name ?? null,
+          gasto: Number(linha.spend) || 0,
+          ...extrairFunil(linha),
+          atualizado_em: new Date().toISOString(),
+        }));
+      const { error } = await admin.from("anuncios_insights")
+        .upsert(registros, { onConflict: "usuario_id,conta_ads_id,data,anuncio_id" });
+      if (!error) n += registros.length;
+    }
+    url = body.paging?.next ?? null;
+  }
+  return n;
+}
+
+// Status efetivo (ACTIVE, PAUSED, CAMPAIGN_PAUSED...) de campanhas,
+// conjuntos e anúncios — usado no filtro Ativas/Desativadas da aba Campanhas.
+async function sincronizarStatus(
+  admin: any, usuarioId: string, contaId: string, actId: string, token: string, erros: string[],
+) {
+  const niveis: [string, string][] = [
+    ["campanha", "campaigns"],
+    ["conjunto", "adsets"],
+    ["anuncio", "ads"],
+  ];
+  for (const [nivel, recurso] of niveis) {
+    let url: string | null = `${GRAPH}/${actId}/${recurso}?fields=id,effective_status&limit=500&access_token=${token}`;
+    for (let pagina = 0; url && pagina < 6; pagina++) {
+      const r = await fetch(url);
+      const body = await r.json();
+      if (!r.ok) { erros.push(`${actId} (${recurso}): ${body?.error?.message ?? "erro"}`); break; }
+      const linhas: any[] = body.data ?? [];
+      if (linhas.length) {
+        const regs = linhas.map((l) => ({
+          usuario_id: usuarioId,
+          conta_ads_id: contaId,
+          nivel,
+          objeto_id: String(l.id),
+          status: l.effective_status ?? null,
+          atualizado_em: new Date().toISOString(),
+        }));
+        await admin.from("anuncios_status").upsert(regs, { onConflict: "usuario_id,objeto_id" });
+      }
+      url = body.paging?.next ?? null;
+    }
+  }
+}
 
 // Funil: cliques no link + eventos do pixel reportados pela API de Insights
 // (landing_page_view = visualização de página; initiate_checkout = checkout aberto)

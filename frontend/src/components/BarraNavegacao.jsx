@@ -17,6 +17,7 @@ export const MarcaMacacoFy = ({ tamanho = 30 }) => (
 
 const ITENS = [
   { para: '/', rotulo: 'Dashboard', icone: 'M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10' },
+  { para: '/campanhas', rotulo: 'Campanhas', icone: 'M3 11l18-8-8 18-2-8-8-2z' },
   { para: '/produtos', rotulo: 'Produtos', icone: 'M21 8l-9-5-9 5v8l9 5 9-5V8M3 8l9 5 9-5M12 13v8' },
   { para: '/custos', rotulo: 'Custos', icone: 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6' },
   { para: '/integracoes', rotulo: 'Conexões', icone: 'M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.5 1.5M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7L12 19' },

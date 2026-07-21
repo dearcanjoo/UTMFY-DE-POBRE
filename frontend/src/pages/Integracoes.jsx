@@ -15,6 +15,49 @@ export default function Integracoes({ usuario }) {
   const [ocupado, setOcupado] = useState(false)
   const [params, setParams] = useSearchParams()
 
+  // ===== Pixel / API de Conversões (CAPI) =====
+  const [pixelId, setPixelId] = useState('')
+  const [capiToken, setCapiToken] = useState('')
+  const [capiAtivo, setCapiAtivo] = useState(false)
+  const [capiCfg, setCapiCfg] = useState(null)
+  const [capiEnviados, setCapiEnviados] = useState(0)
+  const [capiUltimoErro, setCapiUltimoErro] = useState(null)
+
+  const carregarCapi = useCallback(async () => {
+    const { data } = await supabase.from('config_custos')
+      .select('pixel_id, capi_ativo').maybeSingle()
+    if (data) { setCapiCfg(data); setCapiAtivo(!!data.capi_ativo) }
+    const { count } = await supabase.from('vendas')
+      .select('id', { count: 'exact', head: true })
+      .not('capi_enviado_em', 'is', null)
+    setCapiEnviados(count ?? 0)
+    const { data: comErro } = await supabase.from('vendas')
+      .select('capi_erro').not('capi_erro', 'is', null)
+      .order('atualizado_em', { ascending: false }).limit(1)
+    setCapiUltimoErro(comErro?.[0]?.capi_erro ?? null)
+  }, [])
+
+  useEffect(() => { carregarCapi() }, [carregarCapi])
+
+  async function salvarCapi(e) {
+    e.preventDefault()
+    setOcupado(true); setErro(null); setMsg(null)
+    try {
+      const upd = {
+        usuario_id: usuario.id,
+        capi_ativo: capiAtivo,
+        atualizado_em: new Date().toISOString(),
+      }
+      if (pixelId.trim()) upd.pixel_id = pixelId.trim().replace(/\D/g, '')
+      if (capiToken.trim()) upd.capi_token = capiToken.trim()
+      const { error } = await supabase.from('config_custos').upsert(upd, { onConflict: 'usuario_id' })
+      if (error) throw new Error(error.message)
+      setPixelId(''); setCapiToken('')
+      setMsg('Configuração do Pixel salva. Novas vendas aprovadas serão enviadas ao Meta automaticamente.')
+      carregarCapi()
+    } catch (err) { setErro(err.message) } finally { setOcupado(false) }
+  }
+
   const carregar = useCallback(async () => {
     const { data } = await supabase.from('conexoes').select('*')
     const mapa = {}
@@ -279,6 +322,61 @@ export default function Integracoes({ usuario }) {
               </label>
             ))}
           </>
+        )}
+      </div>
+
+      {/* ===== PIXEL / API DE CONVERSÕES (CAPI) ===== */}
+      <div className="card secao">
+        <div className="linha-flex" style={{ marginBottom: 12 }}>
+          <div className="subtitulo" style={{ marginBottom: 0 }}>
+            <span className={`status-bolinha ${capiCfg?.pixel_id && capiAtivo ? 'conectado' : 'desconectado'}`} />
+            Pixel do Meta — API de Conversões
+          </div>
+          {capiEnviados > 0 && (
+            <span className="texto-suave" style={{ fontSize: 12 }}>
+              {capiEnviados} compra{capiEnviados !== 1 ? 's' : ''} enviada{capiEnviados !== 1 ? 's' : ''} ao Meta
+            </span>
+          )}
+        </div>
+
+        {!capiCfg?.pixel_id && (
+          <TutorialIntegracao
+            titulo="Como configurar o envio de compras para o seu Pixel"
+            passos={[
+              'No Gerenciador de Eventos do Meta, selecione o seu Pixel e copie o ID dele (número no topo).',
+              'Ainda no Pixel, abra Configurações → API de Conversões → Gerar token de acesso e copie o token.',
+              'Cole os dois valores abaixo, marque "Envio ativo" e salve.',
+              'Pronto: toda venda aprovada na Cakto vira um evento Purchase enviado direto ao seu Pixel pelo servidor, com e-mail e telefone do comprador hasheados.',
+            ]}
+            nota="O Purchase server-side não depende do navegador do cliente: captura Pix pago depois, compras com bloqueador de anúncios e melhora a qualidade de correspondência do Pixel."
+          />
+        )}
+
+        <form onSubmit={salvarCapi}>
+          <div className="campo">
+            <label>ID do Pixel</label>
+            <input type="text" inputMode="numeric" autoComplete="off" value={pixelId}
+              onChange={(e) => setPixelId(e.target.value)}
+              placeholder={capiCfg?.pixel_id ? `já configurado (${capiCfg.pixel_id}) — cole para substituir` : 'Ex.: 1234567890123456'} />
+          </div>
+          <div className="campo">
+            <label>Token da API de Conversões</label>
+            <input type="password" autoComplete="new-password" value={capiToken}
+              onChange={(e) => setCapiToken(e.target.value)}
+              placeholder={capiCfg ? '••••••••  (cole para substituir)' : 'Cole o token gerado no Gerenciador de Eventos'} />
+          </div>
+          <label className="linha-flex" style={{ marginBottom: 12, cursor: 'pointer', justifyContent: 'flex-start', gap: 10 }}>
+            <input type="checkbox" checked={capiAtivo} onChange={(e) => setCapiAtivo(e.target.checked)}
+              style={{ width: 18, height: 18, accentColor: 'var(--verde-escuro)' }} />
+            <span style={{ fontSize: 13.5 }}>Envio ativo (dispara Purchase a cada venda aprovada)</span>
+          </label>
+          <button className="botao pequeno" disabled={ocupado}>Salvar Pixel</button>
+        </form>
+
+        {capiUltimoErro && (
+          <div className="aviso" style={{ marginTop: 12 }}>
+            Último erro do envio: {capiUltimoErro}
+          </div>
         )}
       </div>
     </div>

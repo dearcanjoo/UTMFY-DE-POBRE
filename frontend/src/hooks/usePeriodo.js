@@ -5,6 +5,7 @@ export const PRESETS = [
   { id: 'hoje', rotulo: 'Hoje' },
   { id: 'ontem', rotulo: 'Ontem' },
   { id: '7d', rotulo: '7 dias' },
+  { id: '14d', rotulo: '14 dias' },
   { id: '30d', rotulo: '30 dias' },
   { id: 'mes', rotulo: 'Mês atual' },
   { id: 'mes_ant', rotulo: 'Mês anterior' },
@@ -22,6 +23,7 @@ export function usePeriodo() {
       case 'hoje': return { inicio: hoje, fim: hoje }
       case 'ontem': { const o = somaDias(hoje, -1); return { inicio: o, fim: o } }
       case '7d': return { inicio: somaDias(hoje, -6), fim: hoje }
+      case '14d': return { inicio: somaDias(hoje, -13), fim: hoje }
       case '30d': return { inicio: somaDias(hoje, -29), fim: hoje }
       case 'mes': return { inicio: hoje.slice(0, 8) + '01', fim: hoje }
       case 'mes_ant': {

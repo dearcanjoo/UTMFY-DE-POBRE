@@ -100,6 +100,22 @@ function parseOrder(d: any, usuarioId: string) {
     metodo_pagamento: d.paymentMethod ?? null,
     data_venda: d.paidAt ?? d.createdAt ?? new Date().toISOString(),
     payload: d,
+    ...extrairUtms(d),
+  };
+}
+
+// UTMs capturadas pelo checkout da Cakto (atribuição por criativo)
+function extrairUtms(d: any) {
+  const limpar = (v: unknown) => {
+    const s = typeof v === "string" ? v.trim() : "";
+    return s || null;
+  };
+  return {
+    utm_source: limpar(d.utm_source),
+    utm_medium: limpar(d.utm_medium),
+    utm_campaign: limpar(d.utm_campaign),
+    utm_content: limpar(d.utm_content),
+    utm_term: limpar(d.utm_term),
   };
 }
 
