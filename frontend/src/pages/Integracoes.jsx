@@ -6,6 +6,10 @@ import TutorialIntegracao from '../components/TutorialIntegracao.jsx'
 const META_APP_ID = import.meta.env.VITE_META_APP_ID
 const META_SCOPES = 'ads_read'
 
+// Código para o campo "Parâmetros de URL" de cada anúncio no Meta Ads.
+// As macros {{...}} são preenchidas pelo próprio Meta a cada clique.
+const CODIGO_UTM = 'utm_source=FB&utm_campaign={{campaign.name}}|{{campaign.id}}&utm_medium={{adset.name}}|{{adset.id}}&utm_content={{ad.name}}|{{ad.id}}&utm_term={{placement}}'
+
 export default function Integracoes({ usuario }) {
   const [conexoes, setConexoes] = useState({})
   const [clientIdCakto, setClientIdCakto] = useState('')
@@ -321,6 +325,27 @@ export default function Integracoes({ usuario }) {
                   style={{ width: 20, height: 20, accentColor: 'var(--verde-escuro)' }} />
               </label>
             ))}
+
+            <div style={{ marginTop: 18 }}>
+              <div className="subtitulo" style={{ fontSize: 13.5 }}>Rastreamento de criativos (UTMs)</div>
+              <TutorialIntegracao
+                titulo="Como rastrear qual criativo deu venda"
+                passos={[
+                  'No Gerenciador de Anúncios, edite o anúncio (cada criativo) e role até Rastreamento → Parâmetros de URL.',
+                  'Cole o código abaixo e publique. O Meta preenche os {{...}} sozinho a cada clique — não mexa no link de destino.',
+                  'Garanta que o clique chegue ao checkout da Cakto com as UTMs na URL (se houver página de vendas no meio, o botão de compra precisa repassar os parâmetros).',
+                  'Pronto: cada venda chega com a identidade do criativo e aparece na aba Campanhas (campanha → conjunto → anúncio).',
+                ]}
+                nota="Anúncio duplicado herda o código com os IDs novos. Renomear campanhas não quebra o rastreio: o casamento é feito pelo ID."
+              />
+              <div className="card bloco-inset" style={{ padding: 10, fontSize: 11.5, wordBreak: 'break-all', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+                {CODIGO_UTM}
+              </div>
+              <button className="botao secundario pequeno" style={{ marginTop: 8 }}
+                onClick={() => { navigator.clipboard.writeText(CODIGO_UTM); setMsg('Código de UTM copiado! Cole nos Parâmetros de URL de cada anúncio.') }}>
+                Copiar código de UTM
+              </button>
+            </div>
           </>
         )}
       </div>
@@ -346,7 +371,8 @@ export default function Integracoes({ usuario }) {
               'No Gerenciador de Eventos do Meta, selecione o seu Pixel e copie o ID dele (número no topo).',
               'Ainda no Pixel, abra Configurações → API de Conversões → Gerar token de acesso e copie o token.',
               'Cole os dois valores abaixo, marque "Envio ativo" e salve.',
-              'Pronto: toda venda aprovada na Cakto vira um evento Purchase enviado direto ao seu Pixel pelo servidor, com e-mail e telefone do comprador hasheados.',
+              'Se o seu Pixel também estiver configurado dentro da Cakto disparando o evento de Compra, desative esse evento lá — o Purchase deve sair somente pelo MacacoFy, senão o Meta pode contar a venda duas vezes.',
+              'Pronto: toda venda aprovada na Cakto vira um evento Purchase enviado direto ao seu Pixel pelo servidor, com e-mail, telefone e ID do clique (fbclid) do comprador.',
             ]}
             nota="O Purchase server-side não depende do navegador do cliente: captura Pix pago depois, compras com bloqueador de anúncios e melhora a qualidade de correspondência do Pixel."
           />

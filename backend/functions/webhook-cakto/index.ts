@@ -1,8 +1,10 @@
 // Webhook da Cakto — recebe eventos de venda em tempo real.
 // Auth própria: ?u=<usuario_id>&s=<webhook_secret> (validado contra a tabela conexoes).
-// Extra: em venda aprovada, dispara o evento Purchase para o Pixel do Meta
-// via API de Conversões (CAPI), com dados do comprador hasheados (SHA-256).
+// Extras em venda aprovada:
+//   1. Purchase server-side para o Pixel do Meta via API de Conversões (CAPI)
+//   2. Notificação push "Venda aprovada no Pix/Cartão! Sua comissão: R$ X"
 import { createClient } from "npm:@supabase/supabase-js@2";
+import webpush from "npm:web-push@3.6.7";
 
 const GRAPH = "https://graph.facebook.com/v19.0";
 
@@ -34,13 +36,15 @@ Deno.serve(async (req) => {
   const venda = parseCakto(payload, usuarioId);
   if (!venda) return json({ ok: true, ignorado: true });
 
-  // Não sobrescreve o carimbo do CAPI: checa antes se esta venda já foi enviada.
+  // Estado anterior: evita reenviar CAPI e push quando a Cakto repete o evento.
   const { data: existente } = await admin
-    .from("vendas").select("capi_enviado_em")
+    .from("vendas").select("capi_enviado_em, status")
     .eq("usuario_id", usuarioId).eq("transacao_id", venda.transacao_id).maybeSingle();
 
   const { error } = await admin.from("vendas").upsert(venda, { onConflict: "usuario_id,transacao_id" });
   if (error) return json({ error: error.message }, 500);
+
+  const aprovouAgora = venda.status === "aprovada" && existente?.status !== "aprovada";
 
   // ===== CAPI: Purchase server-side (exclusivamente via API, como a UTMify) =====
   let capi: string | undefined;
@@ -48,8 +52,55 @@ Deno.serve(async (req) => {
     capi = await enviarPurchaseCapi(admin, usuarioId, venda, payload?.data ?? payload ?? {});
   }
 
+  // ===== Push: "Venda aprovada no Pix! Sua comissão: R$ X" =====
+  if (aprovouAgora) {
+    try { await notificarVenda(admin, usuarioId, venda); } catch { /* push nunca derruba o webhook */ }
+  }
+
   return json({ ok: true, capi });
 });
+
+// Notificação push imediata de venda aprovada
+async function notificarVenda(admin: any, usuarioId: string, venda: any) {
+  const { data: subs } = await admin.from("push_subscriptions")
+    .select("endpoint, p256dh, auth").eq("usuario_id", usuarioId);
+  if (!subs?.length) return;
+
+  const { data: vap } = await admin.from("config_interna").select("chave, valor")
+    .in("chave", ["vapid_public", "vapid_private", "vapid_subject"]);
+  const V = Object.fromEntries((vap ?? []).map((r: any) => [r.chave, r.valor]));
+  if (!V.vapid_public || !V.vapid_private) return;
+  webpush.setVapidDetails(V.vapid_subject || "mailto:admin@macacofy.com", V.vapid_public, V.vapid_private);
+
+  const valor = (Number(venda.valor_comissao) || 0)
+    .toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const mensagem = {
+    title: `Venda aprovada no ${nomePagamento(venda.metodo_pagamento)}!`,
+    body: `Sua comissão: ${valor}`,
+    tag: `venda-${venda.transacao_id}`, // mesma venda não notifica duas vezes
+  };
+
+  for (const s of subs) {
+    try {
+      await webpush.sendNotification(
+        { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+        JSON.stringify(mensagem),
+      );
+    } catch (e: any) {
+      if (e?.statusCode === 404 || e?.statusCode === 410) {
+        await admin.from("push_subscriptions").delete().eq("endpoint", s.endpoint);
+      }
+    }
+  }
+}
+
+function nomePagamento(metodo: unknown): string {
+  const m = String(metodo ?? "").toLowerCase();
+  if (m.includes("pix")) return "Pix";
+  if (m.includes("boleto")) return "Boleto";
+  if (m.includes("card") || m.includes("cartao") || m.includes("credit")) return "Cartão";
+  return m ? m.charAt(0).toUpperCase() + m.slice(1) : "checkout";
+}
 
 // Envia o Purchase à API de Conversões do Meta. Retorna um resumo para o log.
 async function enviarPurchaseCapi(admin: any, usuarioId: string, venda: any, d: any): Promise<string> {
@@ -75,6 +126,11 @@ async function enviarPurchaseCapi(admin: any, usuarioId: string, venda: any, d: 
     const docOuId = String(cliente.id ?? cliente.docNumber ?? cliente.document ?? "").trim();
     if (docOuId) user_data.external_id = [await sha256(docOuId)];
     user_data.country = [await sha256("br")];
+
+    // _fbc a partir do fbclid que o checkout da Cakto anexa ao utm_content
+    // ("nome|id::<fbclid>::") — mesmo dado que o script da UTMify captura na página.
+    const fbclid = extrairFbclid(d.utm_content);
+    if (fbclid) user_data.fbc = `fb.1.${Date.now()}.${fbclid}`;
 
     if (Object.keys(user_data).length < 2) return "sem dados do comprador";
 
@@ -144,6 +200,13 @@ function normalizarNome(v: unknown): { fn: string | null; ln: string | null } {
   if (!s) return { fn: null, ln: null };
   const partes = s.split(/\s+/);
   return { fn: partes[0] || null, ln: partes.length > 1 ? partes[partes.length - 1] : null };
+}
+
+// fbclid vem embutido no utm_content entre "::" (padrão observado no checkout da Cakto)
+function extrairFbclid(utm: unknown): string | null {
+  const s = typeof utm === "string" ? utm : "";
+  const m = s.match(/::([A-Za-z0-9_-]{20,})::/);
+  return m ? m[1] : null;
 }
 
 async function sha256(s: string): Promise<string> {

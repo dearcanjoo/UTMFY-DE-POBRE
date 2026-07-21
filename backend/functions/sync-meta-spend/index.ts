@@ -129,7 +129,9 @@ async function sincronizarStatus(
     ["anuncio", "ads"],
   ];
   for (const [nivel, recurso] of niveis) {
-    let url: string | null = `${GRAPH}/${actId}/${recurso}?fields=id,effective_status&limit=500&access_token=${token}`;
+    // daily_budget: campanha (CBO) e conjunto (ABO); anúncio não tem orçamento
+    const campos = recurso === "ads" ? "id,effective_status" : "id,effective_status,daily_budget";
+    let url: string | null = `${GRAPH}/${actId}/${recurso}?fields=${campos}&limit=500&access_token=${token}`;
     for (let pagina = 0; url && pagina < 6; pagina++) {
       const r = await fetch(url);
       const body = await r.json();
@@ -142,6 +144,7 @@ async function sincronizarStatus(
           nivel,
           objeto_id: String(l.id),
           status: l.effective_status ?? null,
+          orcamento_diario: l.daily_budget != null ? Number(l.daily_budget) / 100 : null,
           atualizado_em: new Date().toISOString(),
         }));
         await admin.from("anuncios_status").upsert(regs, { onConflict: "usuario_id,objeto_id" });

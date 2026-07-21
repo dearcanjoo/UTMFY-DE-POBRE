@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { inicioDoDia, fimDoDia } from '../lib/formato.js'
 
@@ -17,6 +17,16 @@ export function useCampanhas(inicio, fim, contaId) {
   const [contas, setContas] = useState([])
   const [erro, setErro] = useState(null)
   const [carregandoBruto, setCarregandoBruto] = useState(true)
+  const [versao, setVersao] = useState(0)
+
+  const recarregar = useCallback(() => setVersao((v) => v + 1), [])
+
+  // Revalida ao voltar o foco para a aba (status/insights podem ter mudado no Meta)
+  useEffect(() => {
+    const aoFocar = () => setVersao((v) => v + 1)
+    window.addEventListener('focus', aoFocar)
+    return () => window.removeEventListener('focus', aoFocar)
+  }, [])
 
   // Contas de anúncios selecionadas na conexão Meta (para o filtro de conta)
   useEffect(() => {
@@ -45,7 +55,7 @@ export function useCampanhas(inicio, fim, contaId) {
         .select('status, valor_comissao, utm_source, utm_medium, utm_campaign, utm_content, utm_term, data_venda')
         .gte('data_venda', inicioDoDia(inicio).toISOString())
         .lte('data_venda', fimDoDia(fim).toISOString()),
-      supabase.from('anuncios_status').select('objeto_id, status'),
+      supabase.from('anuncios_status').select('objeto_id, status, orcamento_diario'),
     ]).then(([ri, rv, rs]) => {
       if (!ativo) return
       setCarregandoBruto(false)
@@ -54,17 +64,20 @@ export function useCampanhas(inicio, fim, contaId) {
       setInsights(ri.data ?? [])
       setVendas(rv.data ?? [])
       // status é opcional: se a consulta falhar, seguimos sem filtro de status
-      setStatusMapa(new Map((rs.data ?? []).map((s) => [String(s.objeto_id), s.status])))
+      setStatusMapa(new Map((rs.data ?? []).map((s) => [
+        String(s.objeto_id),
+        { status: s.status, orcamento: s.orcamento_diario != null ? Number(s.orcamento_diario) : null },
+      ])))
     })
     return () => { ativo = false }
-  }, [inicio, fim, contaId])
+  }, [inicio, fim, contaId, versao])
 
   const dados = useMemo(() => {
     if (!insights || !vendas) return null
     return montarArvore(insights, vendas, statusMapa ?? new Map())
   }, [insights, vendas, statusMapa])
 
-  return { dados, contas, carregando: carregandoBruto && !dados, erro }
+  return { dados, contas, carregando: carregandoBruto && !dados, erro, recarregar }
 }
 
 // Um nó (campanha/conjunto/anúncio) está "ativo" quando o Meta diz ACTIVE.
@@ -105,10 +118,12 @@ function separar(utm) {
   return { nome: norm(s), id: null }
 }
 
-function novoNo(id, nome, status) {
+function novoNo(id, nome, info) {
   return {
-    id, nome, status: status ?? null,
-    gasto: 0, cliques: 0, ics: 0,
+    id, nome,
+    status: info?.status ?? null,
+    orcamento: info?.orcamento ?? null,
+    gasto: 0, vps: 0, ics: 0,
     vendas: 0, faturamento: 0,
     filhos: new Map(),
   }
@@ -133,10 +148,10 @@ function montarArvore(insights, vendasLista, statusMapa) {
     const anun = conj.filhos.get(aId)
 
     const gasto = Number(l.gasto) || 0
-    const cliques = Number(l.cliques) || 0
+    const vps = Number(l.visualizacoes_pagina) || 0
     const ics = Number(l.checkouts_iniciados) || 0
     for (const no of [camp, conj, anun]) {
-      no.gasto += gasto; no.cliques += cliques; no.ics += ics
+      no.gasto += gasto; no.vps += vps; no.ics += ics
     }
 
     const cadeiaAnuncio = [camp, conj, anun]

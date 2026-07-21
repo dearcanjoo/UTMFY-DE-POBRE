@@ -666,6 +666,56 @@ a.nav-item, a.nav-item:hover { text-decoration: none; }
 .estado-vazio-titulo { font-weight: 600; font-size: 14.5px; margin-bottom: 8px; }
 .estado-vazio .texto-suave { font-size: 12.5px; max-width: 460px; margin: 0 auto; line-height: 1.6; }
 
+/* Trilha de navegação (Campanhas > campanha > conjunto) */
+.trilha-campanhas {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 10px; min-height: 28px;
+}
+.trilha-item {
+  border: none; background: transparent; cursor: pointer;
+  font-family: var(--fonte); font-size: 12.5px; font-weight: 500;
+  color: var(--texto-suave); padding: 4px 8px; border-radius: 8px;
+  max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.trilha-item:hover { background: var(--bg-card); color: var(--texto); }
+.trilha-item.atual { color: var(--texto); font-weight: 600; cursor: default; }
+.trilha-separador { color: var(--texto-suave); font-size: 13px; }
+.entrar-seta {
+  margin-left: 8px; color: var(--texto-suave); font-size: 14px;
+  vertical-align: middle;
+}
+.tabela-campanhas tr.expansivel:hover .entrar-seta { color: var(--verde); }
+
+/* Mini calendário de intervalo */
+.mini-calendario {
+  background: var(--bg-card); border: 1px solid var(--borda); border-radius: var(--radius);
+  padding: 12px; width: 268px; max-width: 100%;
+}
+.mc-cabecalho { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.mc-mes { font-size: 13px; font-weight: 600; }
+.mc-nav {
+  border: 1px solid var(--borda); background: transparent; cursor: pointer;
+  width: 26px; height: 26px; border-radius: 8px; font-size: 14px;
+  color: var(--texto); display: flex; align-items: center; justify-content: center;
+}
+.mc-nav:hover { background: var(--bg); }
+.mc-grade { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.mc-dia-semana {
+  font-size: 10px; font-weight: 600; color: var(--texto-suave);
+  text-align: center; padding: 4px 0; text-transform: uppercase;
+}
+.mc-dia {
+  border: none; background: transparent; cursor: pointer;
+  font-family: var(--fonte); font-size: 12px; color: var(--texto);
+  height: 30px; border-radius: 8px;
+}
+.mc-dia:hover:not(:disabled) { background: var(--bg); }
+.mc-dia:disabled { color: var(--borda-forte); cursor: default; }
+.mc-dia.hoje { font-weight: 700; text-decoration: underline; }
+.mc-dia.dentro { background: var(--verde-suave); border-radius: 0; }
+.mc-dia.extremo { background: var(--verde); color: #fff; font-weight: 600; }
+.mc-dica { font-size: 11px; margin-top: 8px; text-align: center; }
+
 /* ===== MOBILE ===== */
 @media (max-width: 768px) {
   .nav-lateral { display: none; }

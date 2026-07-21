@@ -1,4 +1,6 @@
 import { PRESETS } from '../hooks/usePeriodo.js'
+import MiniCalendario from './MiniCalendario.jsx'
+import { formataDataCurta } from '../lib/formato.js'
 
 export default function SeletorPeriodo({ periodo }) {
   const { preset, setPreset, customInicio, setCustomInicio, customFim, setCustomFim } = periodo
@@ -13,8 +15,14 @@ export default function SeletorPeriodo({ periodo }) {
       </div>
       {preset === 'custom' && (
         <div className="datas-custom">
-          <input type="date" value={customInicio} onChange={(e) => setCustomInicio(e.target.value)} />
-          <input type="date" value={customFim} onChange={(e) => setCustomFim(e.target.value)} />
+          <MiniCalendario
+            inicio={customInicio}
+            fim={customFim}
+            onChange={(i, f) => { setCustomInicio(i); setCustomFim(f) }}
+          />
+          <div className="texto-suave" style={{ fontSize: 12, marginTop: 6 }}>
+            Período: {formataDataCurta(customInicio)} até {formataDataCurta(customFim)}
+          </div>
         </div>
       )}
     </>
