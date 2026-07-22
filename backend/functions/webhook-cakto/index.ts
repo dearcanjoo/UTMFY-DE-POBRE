@@ -41,15 +41,24 @@ Deno.serve(async (req) => {
     .from("vendas").select("capi_enviado_em, status")
     .eq("usuario_id", usuarioId).eq("transacao_id", venda.transacao_id).maybeSingle();
 
+  // "Pix gerado" atrasado nunca rebaixa uma venda que já tem status final.
+  if (venda.status === "pendente" && existente &&
+      ["aprovada", "reembolsada", "chargeback", "recusada"].includes(existente.status)) {
+    return json({ ok: true, ignorado: "status final preservado" });
+  }
+
   const { error } = await admin.from("vendas").upsert(venda, { onConflict: "usuario_id,transacao_id" });
   if (error) return json({ error: error.message }, 500);
 
   const aprovouAgora = venda.status === "aprovada" && existente?.status !== "aprovada";
+  const gerouPagamentoAgora = venda.status === "pendente" && !existente;
 
-  // ===== CAPI: Purchase server-side (exclusivamente via API, como a UTMify) =====
+  // ===== CAPI: Purchase (venda aprovada) e InitiateCheckout (Pix/boleto gerado) =====
   let capi: string | undefined;
   if (venda.status === "aprovada" && !existente?.capi_enviado_em) {
-    capi = await enviarPurchaseCapi(admin, usuarioId, venda, payload?.data ?? payload ?? {});
+    capi = await enviarEventoCapi(admin, usuarioId, venda, payload?.data ?? payload ?? {}, "Purchase");
+  } else if (gerouPagamentoAgora) {
+    capi = await enviarEventoCapi(admin, usuarioId, venda, payload?.data ?? payload ?? {}, "InitiateCheckout");
   }
 
   // ===== Push: "Venda aprovada no Pix! Sua comissão: R$ X" =====
@@ -102,8 +111,8 @@ function nomePagamento(metodo: unknown): string {
   return m ? m.charAt(0).toUpperCase() + m.slice(1) : "checkout";
 }
 
-// Envia o Purchase à API de Conversões do Meta. Retorna um resumo para o log.
-async function enviarPurchaseCapi(admin: any, usuarioId: string, venda: any, d: any): Promise<string> {
+// Envia um evento à API de Conversões do Meta (Purchase ou InitiateCheckout).
+async function enviarEventoCapi(admin: any, usuarioId: string, venda: any, d: any, nomeEvento: string): Promise<string> {
   const { data: cfg } = await admin
     .from("config_custos").select("pixel_id, capi_token, capi_ativo")
     .eq("usuario_id", usuarioId).maybeSingle();
@@ -140,9 +149,9 @@ async function enviarPurchaseCapi(admin: any, usuarioId: string, venda: any, d: 
     if (eventTime > agora || agora - eventTime > 6 * 86400) eventTime = agora;
 
     const evento = {
-      event_name: "Purchase",
+      event_name: nomeEvento,
       event_time: eventTime,
-      event_id: `cakto_${venda.transacao_id}`, // deduplicação
+      event_id: nomeEvento === "Purchase" ? `cakto_${venda.transacao_id}` : `cakto_ic_${venda.transacao_id}`, // deduplicação
       action_source: "website",
       event_source_url: d.checkoutUrl ?? undefined,
       user_data,
@@ -163,10 +172,12 @@ async function enviarPurchaseCapi(admin: any, usuarioId: string, venda: any, d: 
     const body = await r.json();
 
     if (r.ok && body.events_received >= 1) {
-      await admin.from("vendas")
-        .update({ capi_enviado_em: new Date().toISOString(), capi_erro: null })
-        .eq("usuario_id", usuarioId).eq("transacao_id", venda.transacao_id);
-      return "enviado";
+      if (nomeEvento === "Purchase") {
+        await admin.from("vendas")
+          .update({ capi_enviado_em: new Date().toISOString(), capi_erro: null })
+          .eq("usuario_id", usuarioId).eq("transacao_id", venda.transacao_id);
+      }
+      return `${nomeEvento} enviado`;
     }
     const msg = body?.error?.message ?? `HTTP ${r.status}`;
     await admin.from("vendas").update({ capi_erro: String(msg).slice(0, 300) })
@@ -223,7 +234,8 @@ function parseCakto(p: any, usuarioId: string) {
   else if (/chargeback/.test(evento)) status = "chargeback";
   else if (/refused|declined|recusad/.test(evento)) status = "recusada";
   else if (/approved|paid|aprovad|pago/.test(evento)) status = "aprovada";
-  if (!status) return null; // evento não relevante (ex: pix gerado)
+  else if (/(pix|boleto).*(gerad|criad|emitid)|waiting_payment|pending|aguardando/.test(evento)) status = "pendente";
+  if (!status) return null; // evento sem mapeamento
 
   const transacaoId = String(d.id ?? d.refId ?? d.transaction_id ?? d.transactionId ?? "");
   if (!transacaoId) return null;

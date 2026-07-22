@@ -10,6 +10,77 @@ const META_SCOPES = 'ads_read'
 // As macros {{...}} são preenchidas pelo próprio Meta a cada clique.
 const CODIGO_UTM = 'utm_source=FB&utm_campaign={{campaign.name}}|{{campaign.id}}&utm_medium={{adset.name}}|{{adset.id}}&utm_content={{ad.name}}|{{ad.id}}&utm_term={{placement}}'
 
+// Script de rastreamento MacacoFy (universal) para as páginas do funil:
+//   1. Repassa UTMs + fbclid para links de checkout (Cakto e principais plataformas)
+//   2. Dispara InitiateCheckout no clique em qualquer link de checkout,
+//      independente do texto do botão (modelo UTMify)
+// Configuração opcional nas 3 primeiras linhas — o padrão cobre a maioria dos casos.
+const SCRIPT_UTM = `<script>
+(function () {
+  // ===== Configuração (opcional) =====
+  var DISPARAR_IC = true;    // false se o seu Pixel estiver instalado DENTRO do checkout (evita IC duplicado)
+  var SELETOR_EXTRA = '';    // botão que não é link? coloque um seletor CSS aqui (ex.: '.botao-comprar')
+  var DOMINIOS_EXTRAS = [];  // checkout fora da lista? adicione (ex.: ['meucheckout.com'])
+  // ===================================
+  var CHECKOUTS = ['cakto','kiwify','hotmart','perfectpay','kirvano','ticto','monetizze','braip',
+    'payt','greenn','eduzz','pepper','hubla','lastlink','cartpanda','yampi','appmax','zouti',
+    'tribopay','pagtrust','guru','cinqpay','vega'].concat(DOMINIOS_EXTRAS);
+  var CAMPOS = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid','gclid','ttclid','sck'];
+  var CHAVE = 'mcf_utms';
+
+  function ehCheckout(href) {
+    if (!href) return false;
+    var h = String(href).toLowerCase();
+    for (var i = 0; i < CHECKOUTS.length; i++) if (h.indexOf(CHECKOUTS[i]) !== -1) return true;
+    return false;
+  }
+
+  // 1. Captura e guarda as UTMs da URL (sobrevive a funis de várias páginas)
+  var p = new URLSearchParams(location.search);
+  var achados = {};
+  CAMPOS.forEach(function (k) { if (p.get(k)) achados[k] = p.get(k); });
+  if (Object.keys(achados).length) {
+    try { localStorage.setItem(CHAVE, JSON.stringify(achados)); } catch (e) {}
+  }
+  var salvos = {};
+  try { salvos = JSON.parse(localStorage.getItem(CHAVE) || '{}'); } catch (e) {}
+
+  // 2. Injeta as UTMs em todo link de checkout (inclusive criados depois)
+  function aplicar() {
+    document.querySelectorAll('a[href]').forEach(function (a) {
+      if (!ehCheckout(a.href)) return;
+      try {
+        var u = new URL(a.href, location.href);
+        CAMPOS.forEach(function (k) { if (salvos[k] && !u.searchParams.get(k)) u.searchParams.set(k, salvos[k]); });
+        a.href = u.toString();
+      } catch (e) {}
+    });
+  }
+  aplicar();
+  document.addEventListener('DOMContentLoaded', aplicar);
+  new MutationObserver(aplicar).observe(document.documentElement, { childList: true, subtree: true });
+
+  // 3. InitiateCheckout no clique que leva ao checkout (qualquer texto de botão)
+  function marcarIC() {
+    if (!window.fbq) return;
+    var agora = Date.now();
+    var ultimo = 0;
+    try { ultimo = Number(sessionStorage.getItem('mcf_ic')) || 0; } catch (e) {}
+    if (agora - ultimo < 15000) return; // não repete em cliques seguidos
+    try { sessionStorage.setItem('mcf_ic', String(agora)); } catch (e) {}
+    fbq('track', 'InitiateCheckout');
+  }
+  if (DISPARAR_IC) {
+    document.addEventListener('click', function (e) {
+      if (!e.target || !e.target.closest) return;
+      var link = e.target.closest('a[href]');
+      if (link && ehCheckout(link.href)) return marcarIC();
+      if (SELETOR_EXTRA && e.target.closest(SELETOR_EXTRA)) return marcarIC();
+    }, true);
+  }
+})();
+</` + `script>`
+
 export default function Integracoes({ usuario }) {
   const [conexoes, setConexoes] = useState({})
   const [clientIdCakto, setClientIdCakto] = useState('')
@@ -331,19 +402,31 @@ export default function Integracoes({ usuario }) {
               <TutorialIntegracao
                 titulo="Como rastrear qual criativo deu venda"
                 passos={[
-                  'No Gerenciador de Anúncios, edite o anúncio (cada criativo) e role até Rastreamento → Parâmetros de URL.',
-                  'Cole o código abaixo e publique. O Meta preenche os {{...}} sozinho a cada clique — não mexa no link de destino.',
-                  'Garanta que o clique chegue ao checkout da Cakto com as UTMs na URL (se houver página de vendas no meio, o botão de compra precisa repassar os parâmetros).',
+                  'No Gerenciador de Anúncios, edite o anúncio (cada criativo) e role até Rastreamento → Parâmetros de URL. Cole o primeiro código abaixo e publique — o Meta preenche os {{...}} sozinho a cada clique.',
+                  'Se o anúncio aponta para uma página de vendas (e não direto para o checkout), cole o segundo código antes do </body> de TODAS as páginas do funil. Ele captura as UTMs e injeta nos links do checkout da Cakto — sem isso, a venda chega sem rastreio.',
+                  'Teste: abra sua página com ?utm_source=teste no final da URL, clique no botão de compra e confira se o checkout abriu com utm_source=teste na URL.',
                   'Pronto: cada venda chega com a identidade do criativo e aparece na aba Campanhas (campanha → conjunto → anúncio).',
                 ]}
                 nota="Anúncio duplicado herda o código com os IDs novos. Renomear campanhas não quebra o rastreio: o casamento é feito pelo ID."
               />
+              <div className="texto-suave" style={{ fontSize: 12, margin: '10px 0 6px', fontWeight: 600 }}>1. Parâmetros de URL (colar em cada anúncio)</div>
               <div className="card bloco-inset" style={{ padding: 10, fontSize: 11.5, wordBreak: 'break-all', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
                 {CODIGO_UTM}
               </div>
               <button className="botao secundario pequeno" style={{ marginTop: 8 }}
                 onClick={() => { navigator.clipboard.writeText(CODIGO_UTM); setMsg('Código de UTM copiado! Cole nos Parâmetros de URL de cada anúncio.') }}>
                 Copiar código de UTM
+              </button>
+
+              <div className="texto-suave" style={{ fontSize: 12, margin: '16px 0 6px', fontWeight: 600 }}>
+                2. Script de rastreamento (colar antes do &lt;/body&gt; de todas as páginas do funil) — repassa as UTMs ao checkout e marca o InitiateCheckout no clique do botão. Se o seu Pixel estiver instalado dentro do checkout, troque DISPARAR_IC para false na primeira linha.
+              </div>
+              <div className="card bloco-inset" style={{ padding: 10, fontSize: 10.5, maxHeight: 140, overflow: 'auto', whiteSpace: 'pre', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+                {SCRIPT_UTM}
+              </div>
+              <button className="botao secundario pequeno" style={{ marginTop: 8 }}
+                onClick={() => { navigator.clipboard.writeText(SCRIPT_UTM); setMsg('Script copiado! Cole antes do </body> em todas as páginas do funil.') }}>
+                Copiar script de repasse
               </button>
             </div>
           </>
@@ -371,7 +454,7 @@ export default function Integracoes({ usuario }) {
               'No Gerenciador de Eventos do Meta, selecione o seu Pixel e copie o ID dele (número no topo).',
               'Ainda no Pixel, abra Configurações → API de Conversões → Gerar token de acesso e copie o token.',
               'Cole os dois valores abaixo, marque "Envio ativo" e salve.',
-              'Se o seu Pixel também estiver configurado dentro da Cakto disparando o evento de Compra, desative esse evento lá — o Purchase deve sair somente pelo MacacoFy, senão o Meta pode contar a venda duas vezes.',
+              'Remova o seu Pixel de dentro da Cakto (lá não dá para desligar só o evento de Compra): o Purchase deve sair somente pelo MacacoFy, senão o Meta conta a mesma venda duas vezes. Mantenha o pixel base na sua página de vendas e dispare o InitiateCheckout no clique do botão de compra.',
               'Pronto: toda venda aprovada na Cakto vira um evento Purchase enviado direto ao seu Pixel pelo servidor, com e-mail, telefone e ID do clique (fbclid) do comprador.',
             ]}
             nota="O Purchase server-side não depende do navegador do cliente: captura Pix pago depois, compras com bloqueador de anúncios e melhora a qualidade de correspondência do Pixel."
