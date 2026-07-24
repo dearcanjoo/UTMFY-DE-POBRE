@@ -280,10 +280,10 @@ function extrairUtms(d: any) {
 // Prioridade: commissions[] (schema oficial da Cakto) -> campos alternativos -> amount - fees
 function extrairComissao(d: any, cheio: number | null, taxa: number | null): number | null {
   const comissoes: any[] = Array.isArray(d.commissions) ? d.commissions : [];
-  if (comissoes.length === 1) return numero(comissoes[0].commissionValue);
+  if (comissoes.length === 1) return valorComissao(comissoes[0]);
   if (comissoes.length > 1) {
     const produtor = comissoes.find((c) => c.type === "producer");
-    if (produtor) return numero(produtor.commissionValue);
+    if (produtor) return valorComissao(produtor);
   }
   const alt = numero(
     d.commission ?? d.netAmount ?? d.commissionValue ?? d.producerAmount ?? d.sellerAmount ?? d.liquidAmount,
@@ -291,6 +291,11 @@ function extrairComissao(d: any, cheio: number | null, taxa: number | null): num
   if (alt != null) return alt;
   if (cheio != null) return taxa != null ? Math.max(0, cheio - taxa) : cheio;
   return null;
+}
+
+// O webhook usa totalAmount; a API de pedidos usa commissionValue.
+function valorComissao(comissao: any): number | null {
+  return numero(comissao?.totalAmount ?? comissao?.commissionValue ?? comissao?.value);
 }
 
 function numero(v: unknown): number | null {

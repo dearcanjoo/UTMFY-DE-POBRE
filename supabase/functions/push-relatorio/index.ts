@@ -110,11 +110,11 @@ function montarMensagem(job: string, m: any, nome: string) {
       body: `Fechamento de ontem${oi}. Faturamento de ${fat}, investimento em anúncios de ${gasto} e prejuízo de ${lucro}.` };
   }
   if (m.lucro >= 0) {
-    return { title: "MacacoFy · Lucro do dia", tag: "relatorio-parcial",
-      body: `Resultado de hoje até o momento${oi}. Investimento de ${gasto} em anúncios, faturamento de ${fat} e lucro de ${lucro}.` };
+    return { title: "Resultado de hoje", tag: "relatorio-parcial",
+      body: `Faturamento: ${fat}. Investimento: ${gasto}. Lucro: ${lucro}.` };
   }
-  return { title: "MacacoFy · Lucro do dia", tag: "relatorio-parcial",
-    body: `Resultado de hoje até o momento${oi}. Investimento de ${gasto} em anúncios, faturamento de ${fat} e prejuízo de ${lucro}.` };
+  return { title: "Resultado de hoje", tag: "relatorio-parcial",
+    body: `Faturamento: ${fat}. Investimento: ${gasto}. Prejuízo: ${lucro}.` };
 }
 
 async function enviar(admin: any, sub: any, payload: unknown) {

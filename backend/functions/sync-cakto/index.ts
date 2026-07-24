@@ -145,14 +145,18 @@ function mapearStatus(st: string): string | null {
 // comissão líquida do usuário = FATURAMENTO (nunca deduzir taxa de novo)
 function extrairComissao(d: any, cheio: number | null, taxa: number | null): number | null {
   const comissoes: any[] = Array.isArray(d.commissions) ? d.commissions : [];
-  if (comissoes.length === 1) return numero(comissoes[0].commissionValue);
+  if (comissoes.length === 1) return valorComissao(comissoes[0]);
   if (comissoes.length > 1) {
     const produtor = comissoes.find((c) => c.type === "producer");
-    if (produtor) return numero(produtor.commissionValue);
+    if (produtor) return valorComissao(produtor);
   }
   // fallback: valor cheio menos taxas da plataforma
   if (cheio != null) return taxa != null ? Math.max(0, cheio - taxa) : cheio;
   return null;
+}
+
+function valorComissao(comissao: any): number | null {
+  return numero(comissao?.commissionValue ?? comissao?.totalAmount ?? comissao?.value);
 }
 
 function numero(v: unknown): number | null {

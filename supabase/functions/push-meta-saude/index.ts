@@ -1,5 +1,5 @@
 // Verifica a saúde das contas de anúncio selecionadas e envia alertas por Web Push:
-//   3) saldo pré-pago abaixo de R$10  |  cobrança recusada/pendente (cartão)
+//   3) saldo pré-pago abaixo de R$20  |  cobrança recusada/pendente (cartão)
 //   4) conta parada/bloqueada (com o nome da conta e o motivo)
 // Roda periodicamente pelo pg_cron. Dedupe de 12h por (tipo, conta) via notificacoes_log.
 import webpush from "npm:web-push@3.6.7";
@@ -9,7 +9,7 @@ const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json" } });
 
 const GRAPH = "https://graph.facebook.com/v19.0";
-const LIMITE_SALDO = 10;         // reais
+const LIMITE_SALDO = 20;         // reais
 const DEDUPE_HORAS = 12;
 const CAMPOS = "name,account_status,disable_reason,balance,currency,funding_source_details";
 
